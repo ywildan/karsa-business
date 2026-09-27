@@ -38,10 +38,12 @@ class MasterRepository {
       'device_id': deviceId,
     };
     if (id == null) {
-      await db.insert(
-        DbSchema.tableParty,
-        {...values, 'id': party.id, 'created_at': moment, 'deleted': 0},
-      );
+      await db.insert(DbSchema.tableParty, {
+        ...values,
+        'id': party.id,
+        'created_at': moment,
+        'deleted': 0,
+      });
     } else {
       await db.update(
         DbSchema.tableParty,
@@ -101,10 +103,12 @@ class MasterRepository {
       'device_id': deviceId,
     };
     if (id == null) {
-      await db.insert(
-        DbSchema.tableItem,
-        {...values, 'id': item.id, 'created_at': moment, 'deleted': 0},
-      );
+      await db.insert(DbSchema.tableItem, {
+        ...values,
+        'id': item.id,
+        'created_at': moment,
+        'deleted': 0,
+      });
     } else {
       await db.update(
         DbSchema.tableItem,
@@ -126,17 +130,11 @@ class MasterRepository {
     return [for (final row in rows) ItemRow.fromRow(row)];
   }
 
-  Future<void> deleteParty(String id, {int? nowMicros}) => _bury(
-    DbSchema.tableParty,
-    id,
-    nowMicros,
-  );
+  Future<void> deleteParty(String id, {int? nowMicros}) =>
+      _bury(DbSchema.tableParty, id, nowMicros);
 
-  Future<void> deleteItem(String id, {int? nowMicros}) => _bury(
-    DbSchema.tableItem,
-    id,
-    nowMicros,
-  );
+  Future<void> deleteItem(String id, {int? nowMicros}) =>
+      _bury(DbSchema.tableItem, id, nowMicros);
 
   Future<void> _bury(String table, String id, int? nowMicros) => db.update(
     table,

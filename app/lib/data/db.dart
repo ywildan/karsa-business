@@ -24,8 +24,9 @@ String _derivedId(String input) {
       .bytes
       .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
       .join();
-  final variant =
-      ((int.parse(hex[16], radix: 16) & 0x3) | 0x8).toRadixString(16);
+  final variant = ((int.parse(hex[16], radix: 16) & 0x3) | 0x8).toRadixString(
+    16,
+  );
   return '${hex.substring(0, 8)}-${hex.substring(8, 12)}'
       '-5${hex.substring(13, 16)}-$variant${hex.substring(17, 20)}'
       '-${hex.substring(20, 32)}';
@@ -168,10 +169,7 @@ CREATE TABLE $tableMeta (
 
 /// Pembuka basis data dan pemilik satu-satunya untuk nilai perangkat.
 abstract final class KarsaDatabase {
-  static Future<Database> open({
-    String? path,
-    DatabaseFactory? factory,
-  }) async {
+  static Future<Database> open({String? path, DatabaseFactory? factory}) async {
     final opener = factory ?? databaseFactory;
     final target =
         path ?? p.join(await opener.getDatabasesPath(), kDatabaseFileName);
@@ -216,11 +214,10 @@ abstract final class KarsaDatabase {
   }
 
   static Future<void> putMeta(Database db, String key, String value) =>
-      db.insert(
-        DbSchema.tableMeta,
-        {'key': key, 'value': value},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      db.insert(DbSchema.tableMeta, {
+        'key': key,
+        'value': value,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
 }
 
 const String kMetaDeviceId = 'device_id';
@@ -267,20 +264,16 @@ Future<void> seedAccounts(
 }) async {
   final moment = nowMicros ?? DateTime.now().microsecondsSinceEpoch;
   for (final account in ChartOfAccounts.seed) {
-    await txn.insert(
-      DbSchema.tableAccount,
-      {
-        'id': seededAccountId(businessId, account.code),
-        'business_id': businessId,
-        'code': account.code,
-        'name': account.label,
-        'created_at': moment,
-        'updated_at': moment,
-        'deleted': 0,
-        'dirty': 1,
-        'device_id': deviceId,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await txn.insert(DbSchema.tableAccount, {
+      'id': seededAccountId(businessId, account.code),
+      'business_id': businessId,
+      'code': account.code,
+      'name': account.label,
+      'created_at': moment,
+      'updated_at': moment,
+      'deleted': 0,
+      'dirty': 1,
+      'device_id': deviceId,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 }

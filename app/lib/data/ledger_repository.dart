@@ -28,12 +28,14 @@ class LedgerRepository {
       );
     }
     final moment = nowMicros ?? DateTime.now().microsecondsSinceEpoch;
-    await db.transaction((txn) => _insertEntry(
-          txn,
-          businessId: businessId,
-          entry: entry,
-          moment: moment,
-        ));
+    await db.transaction(
+      (txn) => _insertEntry(
+        txn,
+        businessId: businessId,
+        entry: entry,
+        moment: moment,
+      ),
+    );
   }
 
   /// Mengganti sisi jurnal sebuah transaksi.
@@ -221,20 +223,17 @@ class LedgerRepository {
       );
     }
     final id = deviceUuid.v4();
-    await db.insert(
-      DbSchema.tableAccount,
-      {
-        'id': id,
-        'business_id': businessId,
-        'code': trimmed,
-        'name': name.trim(),
-        'created_at': moment,
-        'updated_at': moment,
-        'deleted': 0,
-        'dirty': 1,
-        'device_id': deviceId,
-      },
-    );
+    await db.insert(DbSchema.tableAccount, {
+      'id': id,
+      'business_id': businessId,
+      'code': trimmed,
+      'name': name.trim(),
+      'created_at': moment,
+      'updated_at': moment,
+      'deleted': 0,
+      'dirty': 1,
+      'device_id': deviceId,
+    });
     return id;
   }
 
@@ -316,18 +315,10 @@ class LedgerRepository {
 
 /// Menandai sebuah baris sebagai kuburan: masih ada, masih dikirim, tapi sudah
 /// tidak dibaca siapa-siapa.
-Future<void> _bury(
-  DatabaseExecutor txn,
-  String table,
-  String id,
-  int moment,
-) => txn.update(
+Future<void> _bury(DatabaseExecutor txn, String table, String id, int moment) =>
+    txn.update(
       table,
-      {
-        'deleted': 1,
-        'dirty': 1,
-        'updated_at': moment,
-      },
+      {'deleted': 1, 'dirty': 1, 'updated_at': moment},
       where: 'id = ?',
       whereArgs: [id],
     );

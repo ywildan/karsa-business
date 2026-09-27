@@ -70,12 +70,8 @@ Future<int> countOf(
   return rows.length;
 }
 
-Future<void> markPushed(Database db, String table, String id) => db.update(
-  table,
-  {'dirty': 0},
-  where: 'id = ?',
-  whereArgs: [id],
-);
+Future<void> markPushed(Database db, String table, String id) =>
+    db.update(table, {'dirty': 0}, where: 'id = ?', whereArgs: [id]);
 
 void main() {
   setUpAll(() {
@@ -193,46 +189,49 @@ void main() {
   });
 
   group('semaian', () {
-    test('usaha baru dapat sembilan pos, urut nomor dan jenisnya terbaca',
-        () async {
-      final book = await openBook();
-      addTearDown(book.db.close);
+    test(
+      'usaha baru dapat sembilan pos, urut nomor dan jenisnya terbaca',
+      () async {
+        final book = await openBook();
+        addTearDown(book.db.close);
 
-      final accounts = await book.ledger.accounts(book.businessId);
-      expect(
-        accounts.map((account) => account.code).toList(),
-        ChartOfAccounts.seedCodes,
-      );
-      expect(
-        accounts.map((account) => account.name).toList(),
-        [for (final account in ChartOfAccounts.seed) account.label],
-      );
-      expect(accounts.first.type, AccountType.asset);
-    });
+        final accounts = await book.ledger.accounts(book.businessId);
+        expect(
+          accounts.map((account) => account.code).toList(),
+          ChartOfAccounts.seedCodes,
+        );
+        expect(accounts.map((account) => account.name).toList(), [
+          for (final account in ChartOfAccounts.seed) account.label,
+        ]);
+        expect(accounts.first.type, AccountType.asset);
+      },
+    );
 
-    test('id semaian diturunkan dari isinya, menabur ulang tidak menambah',
-        () async {
-      final book = await openBook();
-      addTearDown(book.db.close);
+    test(
+      'id semaian diturunkan dari isinya, menabur ulang tidak menambah',
+      () async {
+        final book = await openBook();
+        addTearDown(book.db.close);
 
-      final kas = await rowsOf(
-        book.db,
-        DbSchema.tableAccount,
-        where: 'code = ?',
-        args: [AccountCode.kas.code],
-      );
-      expect(kas.single['id'], seededAccountId(book.businessId, '1100'));
+        final kas = await rowsOf(
+          book.db,
+          DbSchema.tableAccount,
+          where: 'code = ?',
+          args: [AccountCode.kas.code],
+        );
+        expect(kas.single['id'], seededAccountId(book.businessId, '1100'));
 
-      await seedAccounts(
-        book.db,
-        businessId: book.businessId,
-        deviceId: book.deviceId,
-      );
-      expect(
-        await countOf(book.db, DbSchema.tableAccount),
-        ChartOfAccounts.seed.length,
-      );
-    });
+        await seedAccounts(
+          book.db,
+          businessId: book.businessId,
+          deviceId: book.deviceId,
+        );
+        expect(
+          await countOf(book.db, DbSchema.tableAccount),
+          ChartOfAccounts.seed.length,
+        );
+      },
+    );
 
     test('id perangkat stabil walau berkasnya dibuka lagi', () async {
       final dir = await Directory.systemTemp.createTemp('karsa-db-test');
@@ -268,43 +267,45 @@ void main() {
   });
 
   group('jurnal', () {
-    test('tertulis dan terbaca kembali persis seperti objek domainnya',
-        () async {
-      final book = await openBook();
-      addTearDown(book.db.close);
-      final party = await book.master.saveParty(
-        businessId: book.businessId,
-        name: 'Rina',
-      );
+    test(
+      'tertulis dan terbaca kembali persis seperti objek domainnya',
+      () async {
+        final book = await openBook();
+        addTearDown(book.db.close);
+        final party = await book.master.saveParty(
+          businessId: book.businessId,
+          name: 'Rina',
+        );
 
-      final entry = post(
-        'piutang-1',
-        DateTime(2026, 9, 4, 17, 30),
-        PostRequest(
-          kind: EntryKind.penjualanKredit,
-          amount: Money(25000),
-          cost: Money(10000),
-          description: 'Empat porsi',
-          partyId: party.id,
-        ),
-      );
-      await book.ledger.record(businessId: book.businessId, entry: entry);
+        final entry = post(
+          'piutang-1',
+          DateTime(2026, 9, 4, 17, 30),
+          PostRequest(
+            kind: EntryKind.penjualanKredit,
+            amount: Money(25000),
+            cost: Money(10000),
+            description: 'Empat porsi',
+            partyId: party.id,
+          ),
+        );
+        await book.ledger.record(businessId: book.businessId, entry: entry);
 
-      final loaded = await book.ledger.entries(businessId: book.businessId);
-      expect(loaded.single.id, entry.id);
-      expect(loaded.single.date, DateTime(2026, 9, 4));
-      expect(loaded.single.kindCode, EntryKind.penjualanKredit.code);
-      expect(loaded.single.description, 'Empat porsi');
-      expect(loaded.single.partyId, party.id);
-      expect(loaded.single.cashAccountCode, AccountCode.kas.code);
-      // Sisinya dibaca urut nomor akun, bukan urut ketikan: yang penting
-      // keempat sisi itu ada dan angkanya tidak berubah.
-      expect(
-        loaded.single.lines.map((line) => line.toString()).toList(),
-        entry.lines.map((line) => line.toString()).toList()..sort(),
-      );
-      expect(Reports.trialBalanceBalances(loaded), isTrue);
-    });
+        final loaded = await book.ledger.entries(businessId: book.businessId);
+        expect(loaded.single.id, entry.id);
+        expect(loaded.single.date, DateTime(2026, 9, 4));
+        expect(loaded.single.kindCode, EntryKind.penjualanKredit.code);
+        expect(loaded.single.description, 'Empat porsi');
+        expect(loaded.single.partyId, party.id);
+        expect(loaded.single.cashAccountCode, AccountCode.kas.code);
+        // Sisinya dibaca urut nomor akun, bukan urut ketikan: yang penting
+        // keempat sisi itu ada dan angkanya tidak berubah.
+        expect(
+          loaded.single.lines.map((line) => line.toString()).toList(),
+          entry.lines.map((line) => line.toString()).toList()..sort(),
+        );
+        expect(Reports.trialBalanceBalances(loaded), isTrue);
+      },
+    );
 
     test('rentang tanggal memotong di level penyimpanan', () async {
       final book = await openBook();
@@ -352,9 +353,7 @@ void main() {
             id: 'cacat',
             date: DateTime(2026, 9, 1),
             kindCode: EntryKind.pengeluaran.code,
-            lines: const [
-              LedgerLine(accountCode: '6200', debit: Money(5000)),
-            ],
+            lines: const [LedgerLine(accountCode: '6200', debit: Money(5000))],
           ),
         ),
         throwsA(
@@ -369,41 +368,43 @@ void main() {
       expect(await countOf(book.db, DbSchema.tableLine), 0);
     });
 
-    test('sisi yang belum pernah berangkat dihapus fisik saat diganti',
-        () async {
-      final book = await openBook();
-      addTearDown(book.db.close);
+    test(
+      'sisi yang belum pernah berangkat dihapus fisik saat diganti',
+      () async {
+        final book = await openBook();
+        addTearDown(book.db.close);
 
-      final original = post(
-        'koreksi',
-        DateTime(2026, 9, 3),
-        const PostRequest(
-          kind: EntryKind.pengeluaran,
-          amount: Money(5000),
-          targetAccountCode: '6200',
-        ),
-      );
-      await book.ledger.record(businessId: book.businessId, entry: original);
-      expect(
-        await countOf(book.db, DbSchema.tableLine, where: 'deleted = 0'),
-        2,
-      );
+        final original = post(
+          'koreksi',
+          DateTime(2026, 9, 3),
+          const PostRequest(
+            kind: EntryKind.pengeluaran,
+            amount: Money(5000),
+            targetAccountCode: '6200',
+          ),
+        );
+        await book.ledger.record(businessId: book.businessId, entry: original);
+        expect(
+          await countOf(book.db, DbSchema.tableLine, where: 'deleted = 0'),
+          2,
+        );
 
-      await book.ledger.replaceLines(
-        businessId: book.businessId,
-        entry: original.copyWith(
-          lines: const [
-            LedgerLine(accountCode: '6200', debit: Money(7000)),
-            LedgerLine(accountCode: '1100', credit: Money(7000)),
-          ],
-        ),
-      );
+        await book.ledger.replaceLines(
+          businessId: book.businessId,
+          entry: original.copyWith(
+            lines: const [
+              LedgerLine(accountCode: '6200', debit: Money(7000)),
+              LedgerLine(accountCode: '1100', credit: Money(7000)),
+            ],
+          ),
+        );
 
-      expect(await countOf(book.db, DbSchema.tableLine), 2);
-      final loaded = await book.ledger.entries(businessId: book.businessId);
-      expect(loaded.single.totalDebit, Money(7000));
-      expect(Reports.trialBalanceBalances(loaded), isTrue);
-    });
+        expect(await countOf(book.db, DbSchema.tableLine), 2);
+        final loaded = await book.ledger.entries(businessId: book.businessId);
+        expect(loaded.single.totalDebit, Money(7000));
+        expect(Reports.trialBalanceBalances(loaded), isTrue);
+      },
+    );
 
     test('sisi yang sudah berangkat dikubur saat diganti', () async {
       final book = await openBook();
@@ -469,10 +470,10 @@ void main() {
       final delta = await book.outbox.next();
       final graves = delta.where((row) => row.isTombstone).toList();
       expect(graves, hasLength(3));
-      expect(
-        graves.map((row) => row.table).toSet(),
-        {DbSchema.tableEntry, DbSchema.tableLine},
-      );
+      expect(graves.map((row) => row.table).toSet(), {
+        DbSchema.tableEntry,
+        DbSchema.tableLine,
+      });
       // Usaha kepala jurnal itu ikut naik walau tidak berubah, supaya server
       // punya tempat untuk menautkan barisnya.
       expect(
@@ -483,42 +484,34 @@ void main() {
   });
 
   group('outbox', () {
-    test('menangkap semua yang berubah lalu diam setelah dikonfirmasi',
-        () async {
-      final book = await openBook();
-      addTearDown(book.db.close);
-      await book.ledger.record(
-        businessId: book.businessId,
-        entry: post('modal', DateTime(2026, 9, 1), modal),
-      );
+    test(
+      'menangkap semua yang berubah lalu diam setelah dikonfirmasi',
+      () async {
+        final book = await openBook();
+        addTearDown(book.db.close);
+        await book.ledger.record(
+          businessId: book.businessId,
+          entry: post('modal', DateTime(2026, 9, 1), modal),
+        );
 
-      final delta = await book.outbox.next();
-      expect(
-        delta.map((row) => row.table).toSet(),
-        {
+        final delta = await book.outbox.next();
+        expect(delta.map((row) => row.table).toSet(), {
           DbSchema.tableBusiness,
           DbSchema.tableAccount,
           DbSchema.tableEntry,
           DbSchema.tableLine,
-        },
-      );
-      expect(delta.every((row) => !row.carried), isTrue);
-      expect(
-        delta.every((row) => row.values['dirty'] == 1),
-        isTrue,
-      );
-      expect(
-        delta.first.updatedAt <= delta.last.updatedAt,
-        isTrue,
-      );
+        });
+        expect(delta.every((row) => !row.carried), isTrue);
+        expect(delta.every((row) => row.values['dirty'] == 1), isTrue);
+        expect(delta.first.updatedAt <= delta.last.updatedAt, isTrue);
 
-      await book.outbox.confirm(delta);
-      expect(await book.outbox.pendingCount(), 0);
-      expect(await book.outbox.next(), isEmpty);
-    });
+        await book.outbox.confirm(delta);
+        expect(await book.outbox.pendingCount(), 0);
+        expect(await book.outbox.next(), isEmpty);
+      },
+    );
 
-    test('ikut menaikkan induk yang sudah bersih, tanpa mengubahnya',
-        () async {
+    test('ikut menaikkan induk yang sudah bersih, tanpa mengubahnya', () async {
       final book = await openBook();
       addTearDown(book.db.close);
       final party = await book.master.saveParty(
@@ -550,10 +543,10 @@ void main() {
       final businessKey = '${DbSchema.tableBusiness}:${book.businessId}';
       final partyKey = '${DbSchema.tableParty}:${party.id}';
       expect(delta.map((row) => row.key), containsAll([businessKey, partyKey]));
-      expect(
-        delta.where((row) => row.carried).map((row) => row.key).toSet(),
-        {businessKey, partyKey},
-      );
+      expect(delta.where((row) => row.carried).map((row) => row.key).toSet(), {
+        businessKey,
+        partyKey,
+      });
 
       await book.outbox.confirm(delta, at: 999999);
       // Baris yang cuma dititip tidak boleh ikut dianggap dikonfirmasi.
@@ -583,9 +576,7 @@ void main() {
       final delta = await book.outbox.next(limit: 2);
       expect(delta, isNotEmpty);
       final keys = delta.map((row) => row.key).toSet();
-      for (final row in delta.where(
-        (row) => row.table == DbSchema.tableLine,
-      )) {
+      for (final row in delta.where((row) => row.table == DbSchema.tableLine)) {
         expect(
           keys,
           contains('${DbSchema.tableEntry}:${row.values['entry_id']}'),
@@ -616,8 +607,9 @@ void main() {
       );
       await book.master.deleteParty(doddy.id);
       final delta = await book.outbox.next();
-      final graves =
-          delta.where((row) => row.table == DbSchema.tableParty).toList();
+      final graves = delta
+          .where((row) => row.table == DbSchema.tableParty)
+          .toList();
       expect(graves, hasLength(1));
       expect(graves.single.id, doddy.id);
       expect(graves.single.isTombstone, isTrue);
@@ -939,10 +931,12 @@ void main() {
             Reports.balanceOf(loaded, AccountType.equity) +
             pl.profit,
       );
-      expect(
-        Reports.cashFlowByDay(loaded).map((day) => day.day.day).toList(),
-        [1, 2, 3, 5],
-      );
+      expect(Reports.cashFlowByDay(loaded).map((day) => day.day.day).toList(), [
+        1,
+        2,
+        3,
+        5,
+      ]);
     });
   });
 }
