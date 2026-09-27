@@ -230,6 +230,20 @@ jobs:
           sha256sum "$apk" | tee "$RUNNER_TEMP/kb-apk-sha256.txt"
           du -h "$apk"
 
+      # Yang dibaca di sini manifest yang sudah di dalam APK jadi, bukan
+      # manifest sumber: izin yang benar-benar diminta pengguna adalah hasil
+      # merge Gradle. Selama INTERNET tidak muncul, janji "catatan tidak
+      # meninggalkan hp" terbukti di artefaknya, bukan di README.
+      - name: Verify the built manifest
+        working-directory: ${{ env.BUILD_DIR }}
+        shell: bash
+        run: >-
+          set -euo pipefail
+
+          python3 "$GITHUB_WORKSPACE/tool/apk_manifest.py"
+          build/app/outputs/flutter-apk/app-release.apk
+          --forbid-permission android.permission.INTERNET
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

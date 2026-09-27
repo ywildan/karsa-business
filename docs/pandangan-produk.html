@@ -1396,6 +1396,7 @@
                   <ol class="steps">
                     <li>hanya di branch <span class="mono">main</span></li>
                     <li>lantai Android dibaca dari SDK, berhenti kalau &lt; 24</li>
+                    <li>manifest APK jadi dibaca ulang: harus tanpa <span class="mono">INTERNET</span></li>
                     <li>cache <span class="mono">~/.gradle</span> — belum ada di mana pun</li>
                     <li>keystore dari 4 secret; kosong → lanjut debug-signed</li>
                     <li><span class="mono">flutter build apk --release</span></li>
@@ -1453,8 +1454,9 @@
                   </tr>
                   <tr>
                     <td><b>tidak jadi dipakai:</b> tambal minSdk</td>
-                    <td class="mono sub">karsa-mobile-build.yml:119–125 — di Flutter
-                      3.47 lantainya sudah 24, menambalnya ke 23 justru merusak</td>
+                    <td class="mono sub">karsa-mobile-build.yml:119–125 — Flutter 3.47
+                      sudah di 24, dan tambalan ke 23 terbukti tidak pernah bekerja:
+                      manifest di APK tetap bilang 24</td>
                   </tr>
                   <tr>
                     <td>sisip signingConfig</td>

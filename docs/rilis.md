@@ -62,21 +62,45 @@ debug. Itu cara membuktikan seluruh jalur Gradle sebelum keystore ada. Konsekuen
 harus diketahui: **APK debug-signed dan release-signed tidak bisa saling menimpa.**
 Sebelum memasang APK ber-signing permanen yang pertama, uninstall versi sebelumnya.
 
-## Lantai Android: 7.0
+## Lantai Android: 7.0 (API 24)
 
-APK pertama yang ter-build (run 36342528276) diperiksa isi artefaknya, dan ia
-**tidak punya entri `META-INF/*.SF` maupun `*.RSA` sama sekali**: AGP 9.1.0
-menandatangani dengan scheme v2 saja. Scheme v2 baru dikenali Android mulai API
-24. Dulu workflow menambal `minSdk` ke 23 — pola warisan dari repo Karsa yang
-lain, tempat tambalnya menaikkan lantai, bukan menurunkan. Di Flutter 3.47
-lantai bawaan sudah 24, sehingga tambalan itu cuma menghasilkan aplikasi yang
-berjanji bisa dipasang di Android 6 padahal tanda tangannya tidak bisa
-diverifikasi di sana.
+Dua fakta yang saling mengunci, keduanya diukur dari artefaknya sendiri lewat
+`tool/apk_manifest.py`, bukan dari asumsi:
 
-Sekarang tidak ada satu pun berkas Gradle yang disunting. `tool/check-android-floor.sh`
-membaca `minSdkVersion` dari SDK yang terpasang di runner dan membuat build
-berhenti kalau lantai turun di bawah 24. Jadi **Karsa Business membutuhkan
-Android 7.0 ke atas**, dan janji itu dijaga mesin, bukan oleh catatan di README.
+1. APK build pertama (run 36342528276) **tidak punya entri `META-INF/*.SF`
+   maupun `*.RSA` sama sekali** — AGP 9.1.0 menandatangani dengan scheme v2
+   saja. Scheme v2 baru dikenali Android mulai API 24.
+2. Lantai bawaan Flutter 3.47.0 sudah 24: `minSdkVersion: Int = 24` di
+   `FlutterExtension.kt` milik SDK di runner.
+
+Dulu workflow menambal `minSdk` ke 23 — pola warisan dari repo Karsa yang lain,
+tempat tambalnya menaikkan lantai. Di sini tambalan itu **tidak pernah bekerja**:
+log build menulis `minSdk = 23` ke `build.gradle.kts`, tetapi manifest yang
+terkompilasi di dalam APK tetap bilang 24. Jadi tidak ada janji palsu yang
+sempat terpasang ke pengguna; yang ada hanyalah ilusi bahwa kitalah yang
+menetapkan lantai itu.
+
+Sekarang tidak ada satu pun berkas Gradle yang disunting.
+`tool/check-android-floor.sh` membaca lantai dari SDK di runner dan membuat
+build berhenti kalau ia turun di bawah 24, dan `tool/apk_manifest.py` membaca
+ulang manifest dari artefak jadi. **Karsa Business membutuhkan Android 7.0 ke
+atas**, dan angkanya datang dari alat, bukan dari catatan di README.
+
+## Janji versi satu diperiksa di artefaknya
+
+Manifest sumber boleh menulis "tidak ada INTERNET"; yang dipasang ke hp pengguna
+adalah manifest hasil merge Gradle. Yang terbaca dari APK yang benar-benar
+ter-build:
+
+```
+permissions  com.ywildan.karsabusiness.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+```
+
+Satu-satunya izin yang diminta milik androidx.core — levelnya `signature`,
+dipasang otomatis, dan tidak membuka jaringan. Tidak ada
+`android.permission.INTERNET`. Langkah **Verify the built manifest** di
+`kb-build.yml` memeriksanya setiap build, jadi janji "catatan tidak meninggalkan
+hp" dijaga mesin.
 
 ## Verifikasi tanpa adb
 
