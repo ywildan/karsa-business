@@ -1,0 +1,129 @@
+name: Validate
+
+# Loop dalam: tidak pernah menyentuh Gradle atau Android.
+# Ini tempat logika dan laporan diiterasi, karena laptop pengembang tidak
+# memiliki Flutter, Dart, atau Android SDK.
+
+on:
+  push:
+    branches: ["main", "feat/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kb-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.0"
+  BUILD_DIR: kb-build
+
+jobs:
+  validate:
+    name: Format, analyze, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # Pin sqflite dan intl ditetapkan dari hasil langkah ini, bukan dari tebakan.
+      - name: Report toolchain
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Generate isolated Flutter project
+        run: >-
+          flutter create
+          --org com.ywildan
+          --project-name karsabusiness
+          "$BUILD_DIR"
+
+      - name: Overlay product source
+        run: |
+          set -euo pipefail
+          cp app/pubspec.yaml "$BUILD_DIR/pubspec.yaml"
+          cp app/analysis_options.yaml "$BUILD_DIR/analysis_options.yaml"
+          rm -f "$BUILD_DIR/test/widget_test.dart"
+          cp -R app/lib/. "$BUILD_DIR/lib/"
+          cp -R app/test/. "$BUILD_DIR/test/"
+          if [ -d app/assets ]; then
+            mkdir -p "$BUILD_DIR/assets"
+            cp -R app/assets/. "$BUILD_DIR/assets/"
+          fi
+
+      - name: Resolve dependencies in CI
+        working-directory: ${{ env.BUILD_DIR }}
+        run: flutter pub get
+
+      - name: Format source
+        working-directory: ${{ env.BUILD_DIR }}
+        run: dart format lib test
+
+      - name: Analyze source
+        working-directory: ${{ env.BUILD_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart analyze --format=machine . > flutter-analyze.log || true
+          while IFS='|' read -r severity _type code file line column _length message; do
+            case "$severity" in
+              ERROR)
+                echo "::error file=$file,line=$line,col=$column::$code: $message"
+                ;;
+              WARNING)
+                echo "::warning file=$file,line=$line,col=$column::$code: $message"
+                ;;
+              INFO)
+                echo "::notice file=$file,line=$line,col=$column::$code: $message"
+                ;;
+            esac
+          done < flutter-analyze.log
+          if grep -q '^ERROR|' flutter-analyze.log; then
+            echo "::error::The analyzer reported errors."
+            exit 1
+          fi
+          echo "The analyzer reported no errors."
+
+      - name: Run tests
+        working-directory: ${{ env.BUILD_DIR }}
+        run: flutter test
+
+      # Tanpa formatter lokal, perbedaan gaya hanya terlihat di sini: diff-nya
+      # dicetak supaya bisa disapu ke commit berikutnya tanpa build ulang.
+      - name: Report source drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          if diff -rq "app/lib" "$BUILD_DIR/lib" > /dev/null 2>&1; then
+            echo "Committed source matches the CI formatter."
+          else
+            echo "::notice::Committed source differs from the CI-formatted copy. Apply the diff below."
+            diff -ru "app/lib" "$BUILD_DIR/lib" | head -n 80 || true
+          fi
+
+      - name: Guard tracked source against secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          targets=(app docs)
+          for optional in migrations api web-dashboard; do
+            [ -d "$optional" ] && targets+=("$optional")
+          done
+          if grep -rInE \
+            '(neondb|postgresql?://[^$]|sk_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16})' \
+            "${targets[@]}"; then
+            echo "::error::Possible secret material found in tracked source."
+            exit 1
+          fi
+          echo "Secret guard passed."
