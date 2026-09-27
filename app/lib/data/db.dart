@@ -21,6 +21,7 @@ String seededAccountId(String businessId, String accountCode) =>
 String _derivedId(String input) {
   final hex = sha1
       .convert(utf8.encode(input))
+      .bytes
       .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
       .join();
   final variant =
@@ -171,8 +172,10 @@ abstract final class KarsaDatabase {
     String? path,
     DatabaseFactory? factory,
   }) async {
-    final target = path ?? p.join(await getDatabasesPath(), kDatabaseFileName);
-    final db = await (factory ?? databaseFactory).openDatabase(
+    final opener = factory ?? databaseFactory;
+    final target =
+        path ?? p.join(await opener.getDatabasesPath(), kDatabaseFileName);
+    final db = await opener.openDatabase(
       target,
       options: OpenDatabaseOptions(
         version: DbSchema.version,

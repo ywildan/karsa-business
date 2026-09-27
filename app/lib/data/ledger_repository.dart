@@ -295,7 +295,7 @@ class LedgerRepository {
     String businessId,
     LedgerEntry entry,
     int moment,
-  }) async {
+  ) async {
     for (final line in entry.lines) {
       await txn.insert(DbSchema.tableLine, {
         'id': deviceUuid.v4(),
