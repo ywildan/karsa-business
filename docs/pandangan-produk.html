@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Karsa Business — Pandangan Produk</title>
+    <meta
+      name="description"
+      content="Rancangan teknis Karsa Business: aplikasi pembukuan bisnis kecil mahasiswa, satu APK dua tingkatan, nol instalasi lokal, target biaya Rp 0 per bulan."
+    />
+    <style>
+      :root {
+        --c-bg: #f8fafc;
+        --c-canvas: #ffffff;
+        --c-border: #cbd5e1;
+        --c-line: #94a3b8;
+        --c-text-main: #0f172a;
+        --c-text-sub: #64748b;
+        --c-accent: #c65d16;
+        --c-accent-dark: #b85b0d;
+        --c-cream: #fdfbf7;
+        --c-ink: #201c18;
+        --c-wash: #f1f5f9;
+        --c-warm: #f7f2ec;
+        --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
+        --font-mono: "SF Mono", Monaco, Consolas, monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--c-bg);
+        font-family: var(--font-ui);
+        color: var(--c-text-main);
+        padding: 40px 24px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .diagram-canvas {
+        background: var(--c-canvas);
+        border: 2px solid var(--c-border);
+        padding: 32px;
+        max-width: 1240px;
+        margin: 0 auto;
+      }
+
+      /* ---------- header ---------- */
+      .diagram-header {
+        border-bottom: 2px solid var(--c-text-main);
+        padding-bottom: 16px;
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+      }
+
+      .diagram-title {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .diagram-subtitle {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--c-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-top: 6px;
+        font-family: var(--font-mono);
+        line-height: 1.6;
+      }
+
+      .mark {
+        margin-left: auto;
+        flex: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--c-accent);
+        color: var(--c-cream);
+        display: grid;
+        place-items: center;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 19px;
+        line-height: 1;
+        padding-bottom: 3px;
+      }
+
+      .spec-meta {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        border: 1px solid var(--c-border);
+        border-top: none;
+      }
+
+      .spec-meta > div {
+        border-right: 1px solid var(--c-border);
+        padding: 10px 12px;
+      }
+
+      .spec-meta > div:last-child {
+        border-right: none;
+      }
+
+      .spec-k {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--c-text-sub);
+      }
+
+      .spec-v {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 3px;
+      }
+
+      /* ---------- block ---------- */
+      .block {
+        margin-top: 36px;
+      }
+
+      .block-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--c-border);
+        padding-bottom: 10px;
+        margin-bottom: 18px;
+      }
+
+      .block-num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 700;
+        border: 1px solid var(--c-accent);
+        color: var(--c-accent);
+        padding: 2px 7px;
+      }
+
+      .block-title {
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .block-ref {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--c-text-sub);
+      }
+
+      .lead {
+        font-size: 14px;
+        line-height: 1.7;
+        max-width: 74ch;
+      }
+
+      .lead + .lead,
+      .lead + .row,
+      .lead + .split,
+      .lead + table.spec {
+        margin-top: 16px;
+      }
+
+      .row {
+        display: grid;
+        gap: 12px;
+      }
+
+      .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .mt16 { margin-top: 16px; }
+      .mt24 { margin-top: 24px; }
+
+      /* ---------- generic pieces ---------- */
+      .badge {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        font-weight: 600;
+        line-height: 1.4;
+        padding: 1px 5px;
+        border: 1px solid var(--c-text-main);
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .badge--filled {
+        background: var(--c-text-main);
+        color: var(--c-canvas);
+      }
+
+      .badge--accent {
+        border-color: var(--c-accent);
+        color: var(--c-accent);
+      }
+
+      .badge--mute {
+        border-color: var(--c-border);
+        color: var(--c-text-sub);
+      }
+
+      .node {
+        border: 1px solid var(--c-border);
+        background: var(--c-canvas);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .node-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--c-border);
+        padding: 8px 10px;
+        background: var(--c-wash);
+      }
+
+      .node-name {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .node-cost {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--c-text-sub);
+        white-space: nowrap;
+      }
+
+      .node-body {
+        padding: 10px;
+        flex: 1;
+      }
+
+      .node-foot {
+        border-top: 1px dashed var(--c-border);
+        padding: 8px 10px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        line-height: 1.5;
+        color: var(--c-text-sub);
+      }
+
+      .node-foot b {
+        color: var(--c-text-main);
+      }
+
+      .node-foot b.alert {
+        color: var(--c-accent);
+      }
+
+      ol.steps {
+        list-style: none;
+        counter-reset: st;
+      }
+
+      ol.steps > li {
+        counter-increment: st;
+        position: relative;
+        padding-left: 22px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.5;
+        margin-bottom: 6px;
+      }
+
+      ol.steps > li:last-child {
+        margin-bottom: 0;
+      }
+
+      ol.steps > li::before {
+        content: counter(st);
+        position: absolute;
+        left: 0;
+        top: 1px;
+        font-size: 9px;
+        color: var(--c-text-sub);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .mono { font-family: var(--font-mono); }
+      .sub { color: var(--c-text-sub); }
+      .acc { color: var(--c-accent); }
+
+      /* ---------- connectors ---------- */
+      .stem {
+        height: 16px;
+        position: relative;
+      }
+
+      .stem::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        border-left: 1px solid var(--c-line);
+      }
+
+      .fan {
+        height: 14px;
+        position: relative;
+        margin-inline: calc(50% / var(--cols, 4));
+        border-bottom: 1px solid var(--c-line);
+      }
+
+      .fan::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        height: 14px;
+        border-left: 1px solid var(--c-line);
+      }
+
+      .branch-row > .cell {
+        position: relative;
+        padding-top: 14px;
+      }
+
+      .branch-row > .cell::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        height: 14px;
+        border-left: 1px solid var(--c-line);
+      }
+
+      /* ---------- trigger row ---------- */
+      .trigger {
+        border: 2px solid var(--c-text-main);
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .trigger-name {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .trigger-note {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--c-text-sub);
+        line-height: 1.45;
+      }
+
+      /* ---------- loop rows ---------- */
+      .loop {
+        display: grid;
+        grid-template-columns: 26px 1fr 130px;
+        border-top: 1px solid var(--c-border);
+      }
+
+      .loop > div {
+        border-bottom: 1px solid var(--c-border);
+        padding: 9px 10px;
+      }
+
+      .loop .l-n {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--c-text-sub);
+        text-align: right;
+        padding-right: 0;
+      }
+
+      .loop .l-cmd {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .loop .l-cmd span {
+        display: block;
+        font-weight: 400;
+        font-size: 10.5px;
+        color: var(--c-text-sub);
+        margin-top: 2px;
+        line-height: 1.5;
+      }
+
+      .loop .l-t {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--c-text-sub);
+        text-align: right;
+      }
+
+      /* ---------- tables ---------- */
+      table.spec {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+      }
+
+      table.spec th {
+        text-align: left;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--c-text-sub);
+        border-bottom: 1px solid var(--c-text-main);
+        padding: 6px 8px;
+        white-space: nowrap;
+      }
+
+      table.spec td {
+        border-bottom: 1px solid var(--c-border);
+        padding: 7px 8px;
+        vertical-align: top;
+        line-height: 1.5;
+      }
+
+      table.spec tr:last-child td {
+        border-bottom: none;
+      }
+
+      table.spec td.mono {
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+
+      table.spec td.nowrap { white-space: nowrap; }
+
+      table.spec td.num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+
+      table.spec td.c { text-align: center; }
+      table.spec th.c { text-align: center; }
+
+      /* ---------- panels ---------- */
+      .split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .panel {
+        border: 1px solid var(--c-border);
+      }
+
+      .panel-head {
+        border-bottom: 1px solid var(--c-border);
+        background: var(--c-wash);
+        padding: 8px 10px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .panel-body {
+        padding: 10px;
+      }
+
+      pre.code {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        line-height: 1.65;
+        background: var(--c-wash);
+        border: 1px solid var(--c-border);
+        padding: 10px 12px;
+        overflow-x: auto;
+        white-space: pre;
+        tab-size: 2;
+      }
+
+      pre.code .k { color: var(--c-accent-dark); font-weight: 600; }
+      pre.code .c { color: var(--c-text-sub); font-style: italic; }
+
+      ul.plain {
+        list-style: none;
+      }
+
+      ul.plain > li {
+        position: relative;
+        padding-left: 14px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.55;
+        margin-bottom: 5px;
+      }
+
+      ul.plain > li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 7px;
+        width: 6px;
+        height: 1px;
+        background: var(--c-text-main);
+      }
+
+      ul.plain > li.no::before {
+        top: 7px;
+        width: 7px;
+        height: 7px;
+        background: none;
+        border: 1px solid var(--c-accent);
+      }
+
+      /* ---------- callout ---------- */
+      .note {
+        border-left: 3px solid var(--c-accent);
+        background: var(--c-cream);
+        padding: 10px 14px;
+        font-size: 12.5px;
+        line-height: 1.65;
+      }
+
+      .note b {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+      }
+
+      .footnote {
+        margin-top: 32px;
+        border-top: 1px solid var(--c-border);
+        padding-top: 12px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--c-text-sub);
+        line-height: 1.7;
+      }
+
+      @media (max-width: 980px) {
+        body { padding: 0; }
+        .diagram-canvas { border: none; padding: 20px 16px 32px; }
+        .spec-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .spec-meta > div:nth-child(3n) { border-right: none; }
+        .spec-meta > div:nth-child(-n + 3) { border-top: none; }
+        .g4, .g3 { grid-template-columns: minmax(0, 1fr); }
+        .g2 { grid-template-columns: minmax(0, 1fr); }
+        .branch-row > .cell::before { display: none; }
+        .branch-row > .cell { padding-top: 0; }
+        .stem, .fan { display: none; }
+        .node-head { flex-wrap: wrap; }
+        .node-cost { margin-left: 0; }
+        .split { grid-template-columns: minmax(0, 1fr); }
+        .diagram-header { flex-wrap: wrap; }
+        .loop { grid-template-columns: 22px 1fr; }
+        .loop .l-t { grid-column: 2; text-align: left; border-bottom: 1px solid var(--c-border); }
+        .block-ref { display: none; }
+        table.spec { font-size: 11px; }
+      }
+
+      @media print {
+        body { padding: 0; background: #fff; }
+        .diagram-canvas { border: none; max-width: none; padding: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="diagram-canvas">
+      <div class="diagram-header">
+        <div>
+          <h1 class="diagram-title">Pandangan Produk — Karsa Business</h1>
+          <p class="diagram-subtitle">
+            Pembukuan bisnis kecil untuk mahasiswa · satu APK, dua tingkatan · nol instalasi lokal ·
+            GitHub Actions sebagai mesin build satu-satunya · target biaya Rp 0 / bulan
+          </p>
+        </div>
+        <div class="mark" aria-hidden="true">K</div>
+      </div>
+
+      <div class="spec-meta">
+        <div>
+          <div class="spec-k">Status</div>
+          <div class="spec-v">Pengembangan</div>
+        </div>
+        <div>
+          <div class="spec-k">Platform</div>
+          <div class="spec-v">Android + Web</div>
+        </div>
+        <div>
+          <div class="spec-k">Data lokal</div>
+          <div class="spec-v">SQLite</div>
+        </div>
+        <div>
+          <div class="spec-k">Data cloud</div>
+          <div class="spec-v">Neon Postgres</div>
+        </div>
+        <div>
+          <div class="spec-k">Distribusi</div>
+          <div class="spec-v">APK / Releases</div>
+        </div>
+        <div>
+          <div class="spec-k">Biaya</div>
+          <div class="spec-v acc">Rp 0 / bulan</div>
+        </div>
+      </div>
+
+      <!-- ============ 01 posisi produk ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">01</span>
+          <span class="block-title">Posisi produk di dalam ekosistem</span>
+          <span class="block-ref">Karsa Ecosystem/content/products.ts:71–79</span>
+        </div>
+        <p class="lead">
+          Karsa Business sudah terdaftar sebagai produk keempat di katalog ekosistem, bersama Karsa
+          (SiKarsa), Karsa Campus, dan Karsa Circle. Sampai dokumen ini ditulis, entri katalognya
+          sengaja tidak menjelaskan mekanisme apa pun — yang tercatat baru dua hal: target penggunanya
+          mahasiswa yang memulai bisnis kecil-kecilan, dan batasannya bukan bisnis besar.
+        </p>
+        <p class="lead" style="margin-top: 12px">
+          Dokumen ini menutup ruang kosong itu: menentukan platform, model data, jalur sinkronisasi,
+          dan cara rilis. Entri katalog <span class="mono sub">products.ts</span> baru boleh diperbarui
+          setelah APK release benar-benar ada, supaya halaman publik tidak pernah menjanjikan sesuatu
+          yang belum bisa diperiksa.
+        </p>
+
+        <div class="row g3 mt16">
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Karsa</span>
+              <span class="node-cost">sudah rilis</span>
+            </div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                Poin keaktifan mahasiswa. Next.js + Supabase, dan satu pendamping Flutter yang
+                sudah punya pola CI yang kita pakai di sini.
+              </p>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Karsa Campus</span>
+              <span class="node-cost">sudah rilis</span>
+            </div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                Jadwal kuliah offline murni, tanpa satu pun dependensi jaringan. Kakek dari
+                arsitektur offline Karsa Business.
+              </p>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Karsa Circle</span>
+              <span class="node-cost">blueprint</span>
+            </div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                Komunitas tulis. Belum dikode, tapi sudah menuliskan doktrin Neon + Actions +
+                Rp 0 yang jadi acuan biaya produk ini.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="note mt16">
+          <b>Batasan yang tidak boleh dilanggar.</b> Tidak ada angka tanpa sumber, tidak ada klaim
+          keamanan hasil audit pihak lain, tidak menyiratkan afiliasi resmi dengan kampus mana pun,
+          dan tidak mempromosikan fitur yang belum ada. Ini aturan rumah yang berlaku untuk semua
+          produk Karsa, termasuk halaman nanti.
+        </div>
+      </div>
+
+      <!-- ============ 02 masalah ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">02</span>
+          <span class="block-title">Masalah yang dipegang pengguna</span>
+          <span class="block-ref">target: mahasiswa usaha kecil</span>
+        </div>
+        <p class="lead">
+          Mahasiswa yang berjualan — warung kecil, reseller, jastip, katering antar-kos, jasa
+          ngerjakan tugas — biasanya tidak punya masalah dengan hitungan. Masalahnya ada di
+          pencatatan: uang usaha dan uang pribadi masuk kantong yang sama, sehingga sisanya hari
+          ini tidak bisa dibilang modal atau untung.
+        </p>
+
+        <div class="row g2 mt16">
+          <div class="panel">
+            <div class="panel-head">Yang terjadi sekarang</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Catatan di aplikasi chat sendiri, atau tidak dicatat sama sekali.</li>
+                <li>Uang jualan kepakai buat jajan, lalu modal hari berikutnya kurang.</li>
+                <li>Piutang teman menumpuk dan hilang dari ingatan dalam dua minggu.</li>
+                <li>Untung terasa ada, tapi tidak pernah bisa ditunjukkan angkanya.</li>
+                <li>Harga jual ditetapkan dari kira-kira, tanpa menghitung HPP.</li>
+                <li>Kalau pindah atau hilang HP, seluruh riwayat usaha ikut hilang.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">Yang dilakukan aplikasi ini</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Memisahkan kas usaha dari uang pribadi sejak modal awal dicatat.</li>
+                <li>Mencatat piutang dan utang sebagai akun, bukan sebagai ingatan.</li>
+                <li>Menarik laba rugi dan neraca saldo dari catatan yang sudah ada.</li>
+                <li>Menampilkan arus kas harian dan kategori terboros tanpa input tambahan.</li>
+                <li>Menghitung margin per produk bila stok dan modalnya dicatat.</li>
+                <li>Menjaga data tetap utuh tanpa internet, dan mencadangkannya di versi 2.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="note mt16">
+          <b>Yang tidak kita kejar.</b> Invoice profesional, pajak, multi-gudang, gaji karyawan,
+          POS, atau laporan yang siap dibawa ke bank. Sekali produk ini jadi aplikasi
+          akuntansi, ia akan kalah dari spreadsheet dan kalah dari aplikasi yang lebih tua.
+          Nilainya justru di tiga ketukan untuk mencatat.
+        </div>
+      </div>
+
+      <!-- ============ 03 dua versi ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">03</span>
+          <span class="block-title">Dua tingkatan, satu berkas APK</span>
+          <span class="block-ref">EDITION=auto · ProGate runtime</span>
+        </div>
+        <p class="lead">
+          Versi 1 gratis dan seluruh datanya hidup di HP pengguna — tidak ada satu pun permintaan
+          jaringan di jalur baca-tulisnya. Versi 2 adalah versi 1 plus sinkronisasi dan dashboard
+          analitik di web. Keduanya bukan dua aplikasi: satu APK yang sama diunduh semua orang,
+          dan fitur lanjutan dibuka ketika kode lisensi terverifikasi.
+        </p>
+
+        <table class="spec mt16">
+          <thead>
+            <tr>
+              <th style="width: 34%">Kapabilitas</th>
+              <th class="c" style="width: 22%">v1 — Gratis</th>
+              <th class="c">v2 — Berbayar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Catat transaksi, modal awal, pengeluaran</td>
+              <td class="c">Ya</td>
+              <td class="c">Ya</td>
+            </tr>
+            <tr>
+              <td>Neraca saldo &amp; laba rugi</td>
+              <td class="c">Ya</td>
+              <td class="c">Ya</td>
+            </tr>
+            <tr>
+              <td>Persediaan per produk</td>
+              <td class="c">Ya</td>
+              <td class="c">Ya</td>
+            </tr>
+            <tr>
+              <td>Jumlah usaha yang bisa dikelola</td>
+              <td class="c mono">1</td>
+              <td class="c mono">hingga 5</td>
+            </tr>
+            <tr>
+              <td>Dashboard dalam aplikasi</td>
+              <td class="c">Bulan berjalan</td>
+              <td class="c">12 bulan ke atas</td>
+            </tr>
+            <tr>
+              <td>Grafik arus kas harian</td>
+              <td class="c">1 garis</td>
+              <td class="c">Garis + banding periode</td>
+            </tr>
+            <tr>
+              <td>Grafik kategori pengeluaran</td>
+              <td class="c">Bar masuk/keluar</td>
+              <td class="c">Pie 5 teratas + margin</td>
+            </tr>
+            <tr>
+              <td>Usia piutang 30 / 60 / 90 hari</td>
+              <td class="c">Daftar saja</td>
+              <td class="c">Daftar + grafik aging</td>
+            </tr>
+            <tr>
+              <td>Sinkron otomatis ke cloud</td>
+              <td class="c dead">Tidak</td>
+              <td class="c">Ya</td>
+            </tr>
+            <tr>
+              <td>Dashboard analitik di web</td>
+              <td class="c dead">Tidak</td>
+              <td class="c">Ya, baca-saja</td>
+            </tr>
+            <tr>
+              <td>Multi-perangkat satu pemilik</td>
+              <td class="c dead">Tidak</td>
+              <td class="c">Ya, hingga 3 perangkat</td>
+            </tr>
+            <tr>
+              <td>Cadangan berkas manual</td>
+              <td class="c">Ya</td>
+              <td class="c">Ya</td>
+            </tr>
+            <tr>
+              <td>Butuh internet</td>
+              <td class="c mono">Tidak pernah</td>
+              <td class="c mono">Hanya saat sinkron</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="split mt16">
+          <div class="panel">
+            <div class="panel-head">Kenapa bukan dua APK</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Pembeli yang menginstal APK "Pro" mendapat aplikasi baru, bukan upgrade — datanya tidak ikut, karena sandbox berbeda.</li>
+                <li>Dua artifact berarti dua jalur <span class="mono">versionCode</span> dan dua kali build Android per rilis, pada menit Actions yang jadi sumber daya paling langka di sini.</li>
+                <li>Penguncian sudah online lewat lisensi. APK kedua tidak menambahkan apa pun selain biaya.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">Konsekuensi yang diterima</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Membeli versi 2 = mengetik kode, bukan memasang ulang. Data tetap di tempat.</li>
+                <li>Fitur lanjutan harus punya keadaan "terkunci" yang jujur di UI, bukan hilang diam-diam.</li>
+                <li>Bangunan fitur pro harus bisa diuji tanpa lisensi asli, lewat mode tes di CI.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 04 arsitektur ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">04</span>
+          <span class="block-title">Arsitektur</span>
+          <span class="block-ref">jalur tulis hanya dari aplikasi</span>
+        </div>
+
+        <div class="trigger">
+          <div class="trigger-name">PERANGKAT PENGGUNA — sumber kebenaran untuk versi 1</div>
+          <div class="trigger-note">
+            Flutter · kompiler Dart · basis data SQLite di penyimpanan aplikasi · tidak ada hak akses
+            jaringan pada jalur biasa
+          </div>
+        </div>
+        <div class="stem"></div>
+
+        <div class="node">
+          <div class="node-head">
+            <span class="node-name">lib/domain — murni Dart</span>
+            <span class="node-cost">tanpa import flutter</span>
+          </div>
+          <div class="node-body">
+            <ol class="steps">
+              <li>Money — bilangan bulat rupiah, bukan double.</li>
+              <li>LedgerEngine — memvalidasi saldo debit = kredit.</li>
+              <li>ReportQuery — neraca saldo, laba rugi, arus kas.</li>
+              <li>SyncProtocol — menyusun delta dan aturan konflik.</li>
+            </ol>
+          </div>
+          <div class="node-foot">
+            <b>Ini kompensasi utamanya.</b> Karena tidak ada <b>flutter run</b> di laptop, logika
+            laporan harus bisa dibuktikan lewat <b>dart test</b> di dalam CI — bukan dengan emulator
+            atau menunggu APK jadi.
+          </div>
+        </div>
+        <div class="stem"></div>
+
+        <div class="node">
+          <div class="node-head">
+            <span class="node-name">lib/data — SQLite</span>
+            <span class="node-cost">sqflite</span>
+          </div>
+          <div class="node-body">
+            <ol class="steps">
+              <li>Setiap baris yang bisa disinkron membawa <b>dirty</b>, <b>deleted</b>, <b>device_id</b>.</li>
+              <li>Outbox tidak berupa tabel terpisah: outbox adalah <b>WHERE dirty = 1</b>.</li>
+              <li>Kursor tarik ada di tabel <b>meta.last_pulled_rev</b>.</li>
+            </ol>
+          </div>
+          <div class="node-foot">
+            Versi 1 berhenti di sini. Semua yang di bawah garis ini hanya hidup setelah lisensi sah.
+          </div>
+        </div>
+        <div class="stem"></div>
+
+        <div class="fan" style="--cols: 3"></div>
+        <div class="row g3 branch-row">
+          <div class="cell">
+            <div class="node">
+              <div class="node-head">
+                <span class="node-name">Cloudflare Workers</span>
+                <span class="node-cost">Rp 0</span>
+              </div>
+              <div class="node-body">
+                <ol class="steps">
+                  <li>POST /license/verify</li>
+                  <li>POST /sync/push — terima delta</li>
+                  <li>GET /sync/pull?since_rev=</li>
+                  <li>GET /api/report — untuk web</li>
+                </ol>
+              </div>
+              <div class="node-foot">
+                Dipilih bukan karena lebih cepat, tapi karena tingkat gratisnya
+                <b>mengizinkan pemakaian komersial</b>. Lihat blok 10.
+              </div>
+            </div>
+          </div>
+          <div class="cell">
+            <div class="node">
+              <div class="node-head">
+                <span class="node-name">Neon Postgres</span>
+                <span class="node-cost">Free · Singapura</span>
+              </div>
+              <div class="node-body">
+                <ol class="steps">
+                  <li>Cermin 1:1 dari skema SQLite.</li>
+                  <li>Kolom milik server: owner_id, origin_device, rev.</li>
+                  <li>Satu sequence global untuk antrean perubahan.</li>
+                </ol>
+              </div>
+              <div class="node-foot">
+                Peran aplikasi terbatas pada skema <b>public</b>, lewat host ber-<b>-pooler</b>
+                dengan <b>sslmode=require</b>.
+              </div>
+            </div>
+          </div>
+          <div class="cell">
+            <div class="node">
+              <div class="node-head">
+                <span class="node-name">Vercel — dashboard</span>
+                <span class="node-cost">Hobby</span>
+              </div>
+              <div class="node-body">
+                <ol class="steps">
+                  <li>HTML statis + Chart.js dari CDN.</li>
+                  <li>Tarik agregat lewat API, tanpa basis data di jalur render.</li>
+                  <li>Baca-saja. Tidak ada tombol simpan.</li>
+                </ol>
+              </div>
+              <div class="node-foot">
+                Tidak ada <b>node_modules</b> yang perlu dipasang: berkasnya ditulis tangan
+                dan di-commit apa adanya.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="note mt16">
+          <b>Aturan yang menahan seluruh sisanya tetap sederhana.</b> Hanya aplikasi yang menulis.
+          Dashboard web tidak punya satu pun jalur tulis. Begitu aturan ini dilanggar — misalnya ada
+          tombol koreksi di web — kebijakan konflik di blok 07 tidak lagi cukup dan kita butuh
+          penggabungan per-bidang.
+        </div>
+      </div>
+
+      <!-- ============ 05 model data ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">05</span>
+          <span class="block-title">Model data</span>
+          <span class="block-ref">rupiah integer · id dibuat di perangkat</span>
+        </div>
+        <p class="lead">
+          Semua uang disimpan sebagai bilangan bulat rupiah. Rupiah tidak punya pecahan yang bisa
+          dipakai, jadi memilih <span class="mono sub">int</span> sekaligus menghapus kelas bug
+          pembulatan yang paling umum di aplikasi keuangan buatan sendiri. Kunci utama dibuat di
+          perangkat lewat UUID, sehingga dua HP yang sedang offline bisa membuat baris tanpa
+          saling menabrak.
+        </p>
+
+        <div class="row g3 mt16">
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Identitas</span>
+            </div>
+            <div class="node-body">
+              <ul class="plain">
+                <li>business — satu usaha, satu namespace</li>
+                <li>party — pelanggan / pemasok / keduanya</li>
+                <li>item — produk, harga jual, modal, flag stok</li>
+                <li>category — penanda kelompok pengeluaran</li>
+              </ul>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Jurnal</span>
+            </div>
+            <div class="node-body">
+              <ul class="plain">
+                <li>account — bagan akun yang disemai</li>
+                <li>ledger_entry — satu kejadian transaksi</li>
+                <li>ledger_line — sisi debit ATAU kredit</li>
+                <li>stock_movement — masuk/keluar barang</li>
+              </ul>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Sinkron</span>
+            </div>
+            <div class="node-body">
+              <ul class="plain">
+                <li>meta — device_id, kursor rev, offset jam</li>
+                <li>license — kode, token pemilik, cek terakhir</li>
+                <li>di server: owner, license, device</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="split mt16">
+          <div class="panel">
+            <div class="panel-head">Bagan akun yang disemai</div>
+            <div class="panel-body">
+              <table class="spec">
+                <thead>
+                  <tr>
+                    <th>Kode</th>
+                    <th>Nama akun</th>
+                    <th>Jenis</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="mono">1100</td><td>Kas</td><td class="mono sub">aset</td></tr>
+                  <tr><td class="mono">1200</td><td>Piutang Usaha</td><td class="mono sub">aset</td></tr>
+                  <tr><td class="mono">1300</td><td>Persediaan</td><td class="mono sub">aset</td></tr>
+                  <tr><td class="mono">2100</td><td>Hutang Usaha</td><td class="mono sub">kewajiban</td></tr>
+                  <tr><td class="mono">3100</td><td>Modal Pemilik</td><td class="mono sub">ekuitas</td></tr>
+                  <tr><td class="mono">3200</td><td>Prive</td><td class="mono sub">ekuitas</td></tr>
+                  <tr><td class="mono">5100</td><td>Penjualan</td><td class="mono sub">pendapatan</td></tr>
+                  <tr><td class="mono">6100</td><td>Harga Pokok Penjualan</td><td class="mono sub">beban</td></tr>
+                  <tr><td class="mono">6200</td><td>Beban Operasional</td><td class="mono sub">beban</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">Kolom wajib di tiap baris sinkron</div>
+            <div class="panel-body">
+              <pre class="code"><span class="k">id</span>          uuid dibuat perangkat, kunci utama
+<span class="k">created_at</span>  mikrotik
+<span class="k">updated_at</span>  mikrotik; di-stempel ulang server
+<span class="k">deleted</span>     0/1 tombstone, bukan hapus fisik
+<span class="k">dirty</span>       1 = menunggu dikirim (indeks parsial)
+<span class="k">device_id</span>   siapa pengubah terakhir
+
+<span class="c">-- milik server, tidak pernah dikirim klien --</span>
+<span class="k">owner_id</span>      diturunkan dari token lisensi
+<span class="k">rev</span>           nextval(sync_rev_seq)</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="note mt16">
+          <b>Kenapa double-entry di mesin tapi tidak di layar.</b> Skema dua sisi adalah satu-satunya
+          cara membuat piutang, harga pokok, dan neraca saldo tetap cocok tanpa perhitungan manual —
+          sementara pengguna tidak perlu pernah membaca kata "debit". Kerumitannya dipindah ke sistem,
+          bukan ditambahkan ke pengguna.
+        </div>
+      </div>
+
+      <!-- ============ 06 pembukuan ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">06</span>
+          <span class="block-title">Yang terjadi di balik tiga ketukan</span>
+          <span class="block-ref">contoh nyata, bukan spesifikasi</span>
+        </div>
+
+        <div class="row g3">
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Modal awal</span>
+              <span class="node-cost">Rp 300.000</span>
+            </div>
+            <div class="node-body">
+              <p class="sub mono" style="font-size: 11px; line-height: 1.6">
+                "Saya mulai jualan dengan uang 300 ribu"
+              </p>
+              <pre class="code mt16">D 1100 Kas          300.000
+   C 3100 Modal Pemilik   300.000</pre>
+            </div>
+            <div class="node-foot">
+              Kasmu bertambah, tapi itu bukan untung: itu utangmu pada dirimu sendiri.
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Jualan tidak tunai</span>
+              <span class="node-cost">Rp 25.000</span>
+            </div>
+            <div class="node-body">
+              <p class="sub mono" style="font-size: 11px; line-height: 1.6">
+                "Nasi telur ke Rina, belum bayar"
+              </p>
+              <pre class="code mt16">D 1200 Piutang       25.000
+   C 5100 Penjualan       25.000</pre>
+            </div>
+            <div class="node-foot">
+              Penghasilan sudah tercatat walau uang belum masuk — dan kas hari ini tidak ikut naik.
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Beli telur</span>
+              <span class="node-cost">Rp 40.000</span>
+            </div>
+            <div class="node-body">
+              <p class="sub mono" style="font-size: 11px; line-height: 1.6">
+                "Beli bahan, bayar tunai"
+              </p>
+              <pre class="code mt16">D 6200 Beban         40.000
+   C 1100 Kas              40.000</pre>
+            </div>
+            <div class="node-foot">
+              Bila barangnya masih ada dan diberi flag stok, sisi debit pindah ke 1300 Persediaan.
+            </div>
+          </div>
+        </div>
+
+        <p class="lead mt16">
+          Ketika Rina membayar minggu depan, yang terjadi hanya memindahkan angka antar akun:
+          <span class="mono sub">D 1100 Kas / C 1200 Piutang</span>. Penghasilan tidak tercatat
+          dua kali, dan saldo piutang turun dengan sendirinya. Dari struktur yang sama, laporan
+          laba rugi dan neraca saldo tinggal menjadi satu perintah <span class="mono sub">GROUP BY</span>
+          — bukan perhitungan yang dirakit di layar.
+        </p>
+
+        <div class="row g4 mt16">
+          <div class="node">
+            <div class="node-head"><span class="node-name">Neraca saldo</span></div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                <span class="mono">SUM(debit) - SUM(credit)</span> per akun. Kalau satu sisi tidak
+                seimbang, aplikasi menolak menyimpannya.
+              </p>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head"><span class="node-name">Laba rugi</span></div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                Pendapatan dikurangi beban pada rentang tanggal yang dipilih. Bukan selisih isi
+                dompet.
+              </p>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head"><span class="node-name">Arus kas</span></div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                Hanya baris yang menyentuh akun 1100, dikelompokkan per hari. Ini yang menjawab
+                "kenapa untung tapi uang tidak ada".
+              </p>
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head"><span class="node-name">Usia piutang</span></div>
+            <div class="node-body">
+              <p class="sub" style="font-size: 12px; line-height: 1.6">
+                Selisih tanggal jatuh terhadap hari ini, dikelompokkan ke keranjang 30/60/90.
+                Grafik ini khusus versi 2.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 07 sinkronisasi ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">07</span>
+          <span class="block-title">Jalur sinkronisasi versi 2</span>
+          <span class="block-ref">tahan dibunuh · offline tiga minggu · multi-perangkat</span>
+        </div>
+        <p class="lead">
+          Skenario yang harus bisa gagal dengan aman: pengguna mencatat dua puluh transaksi di
+          pegunungan tanpa sinyal, lalu aplikasinya mati sendiri di tengah pengiriman. Ia tidak
+          boleh kehilangan satu pun catatan dan tidak boleh menduplikasi satu pun.
+        </p>
+
+        <div class="loop mt16">
+          <div class="l-n">1</div>
+          <div class="l-cmd">Perangkat menulis<span>Tiap simpan men-set <span class="mono">dirty = 1</span> dan menaikkan <span class="mono">updated_at</span> monotonic lokal.</span></div>
+          <div class="l-t">SQLite · offline</div>
+
+          <div class="l-n">2</div>
+          <div class="l-cmd">Ambil delta<span><span class="mono">SELECT … WHERE dirty = 1 ORDER BY updated_at LIMIT 200</span>. Satu entry dikirim bersama seluruh line-nya.</span></div>
+          <div class="l-t">200 baris / batch</div>
+
+          <div class="l-n">3</div>
+          <div class="l-cmd">Naik ke server<span><span class="mono">POST /sync/push</span> dengan token lisensi. <span class="mono">owner_id</span> diturunkan server, tidak pernah diterima dari klien.</span></div>
+          <div class="l-t">Workers → Neon</div>
+
+          <div class="l-n">4</div>
+          <div class="l-cmd">Upsert idempoten<span><span class="mono">ON CONFLICT (id) DO UPDATE</span> lalu server men-stempel ulang <span class="mono">updated_at</span> dan mengambil <span class="mono">nextval(rev)</span>.</span></div>
+          <div class="l-t">kirim ulang = aman</div>
+
+          <div class="l-n">5</div>
+          <div class="l-cmd">Tutup lokal<span>Nilai kanonik dari balasan ditulis dan <span class="mono">dirty</span> dihapus — dalam satu transaksi lokal. Mati sebelum sini? Baris masih dirty, diulang dari langkah 2.</span></div>
+          <div class="l-t">atomik</div>
+
+          <div class="l-n">6</div>
+          <div class="l-cmd">Tarik perubahan<span><span class="mono">GET /sync/pull?since_rev=…</span> halaman 500 baris, diterapkan berurutan dengan <span class="mono">defer_foreign_keys</span>, kursor naik hanya setelah commit.</span></div>
+          <div class="l-t">berbasis rev</div>
+        </div>
+
+        <div class="row g2 mt16">
+          <div class="panel">
+            <div class="panel-head">Kenapa konfliknya mudah</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Jam perangkat tidak pernah menentukan pemenang — server yang men-stempel saat baris baru tiba.</li>
+                <li>Perangkat yang sama selalu boleh menimpa barisnya sendiri.</li>
+                <li>Urutan tiba = urutan menang. Satu orang mengedit baris yang sama di dua HP jarang terjadi, dan yang terakhir tersimpan yang menang.</li>
+                <li>Menghapus baris fisik tidak pernah disinkronkan; tombstone yang dikirim, lalu dikompaksi setelah 30 hari.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">Yang harus diuji sebelum percaya</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Offline 3 minggu → tarik bertahap 500 baris, kursor tidak pernah melompat.</li>
+                <li>Dibunuh tepat setelah langkah 4 → hasil akhirnya identik dengan yang tidak dibunuh.</li>
+                <li>Dua perangkat membuat baris berbeda pada saat sama → keduanya sampai, tanpa tabrakan id.</li>
+                <li>Jam pengguna mundur seminggu → urutan lokal tetap benar karena monotonic, bukan wall-clock.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 08 lisensi ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">08</span>
+          <span class="block-title">Pembuka versi 2</span>
+          <span class="block-ref">tanpa payment gateway · tanpa biaya</span>
+        </div>
+        <p class="lead">
+          Tidak ada budget untuk payment gateway, dan tidak butuh. Transaksi terjadi di luar
+          sistem — kamu menerima transfer atau QRIS pribadi, lalu menerbitkan kode. Yang sistem
+          kerjakan hanya satu: memutuskan apakah sebuah perangkat boleh menampilkan fitur lanjutan.
+        </p>
+
+        <div class="row g2 mt16">
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Alur penerbitan</span>
+            </div>
+            <div class="node-body">
+              <ol class="steps">
+                <li>Kamu menghasilkan kode acak yang tidak bisa ditebak, di luar aplikasi.</li>
+                <li>Perintah <span class="mono">INSERT INTO license …</span> lewat workflow <span class="mono">db-migrate.yml</span>.</li>
+                <li>Kode dikirim ke pembeli, dicatat siapa dan sejak kapan.</li>
+                <li>Mencabut akses = <span class="mono">status = 'revoked'</span>, berlaku pada cek berikutnya.</li>
+              </ol>
+            </div>
+            <div class="node-foot">
+              Tanpa panel admin. Pada skala puluhan pembeli, <b>psql</b> lebih murah dan lebih sulit dibobol daripada halaman admin buatan sendiri.
+            </div>
+          </div>
+          <div class="node">
+            <div class="node-head">
+              <span class="node-name">Alur verifikasi di aplikasi</span>
+            </div>
+            <div class="node-body">
+              <ol class="steps">
+                <li>Pengguna mengetik <span class="mono">KRSB-7QF2-M4XN</span> di halaman Lisensi.</li>
+                <li>Kirim ke <span class="mono">POST /license/verify</span>; balasannya token pemilik + edisi.</li>
+                <li>Disimpan di <span class="mono">flutter_secure_storage</span>, bukan SharedPreferences.</li>
+                <li>Cek ulang tiap 7 hari, dengan toleransi offline 14 hari memakai batas waktu terbaik yang pernah dilihat.</li>
+              </ol>
+            </div>
+            <div class="node-foot">
+              Batas perangkat ditegakkan server lewat tabel <b>device</b>, bukan lewat janji di aplikasi.
+            </div>
+          </div>
+        </div>
+
+        <div class="note mt16">
+          <b>Dua lubang yang harus ditutup sejak awal.</b> Endpoint verifikasi harus dibatasi laju
+          per alamat dan per kode, kalau tidak ia menjadi mesin pencari kode lisensi. Dan karena
+          penguncian hanya berlaku di sisi aplikasi, jangan pernah menyimpan apa pun di cloud yang
+          pengaksesannya cukup dengan menebak <span class="mono">owner_id</span> — token pemilik
+          adalah satu-satunya kunci.
+        </div>
+      </div>
+
+      <!-- ============ 09 CI ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">09</span>
+          <span class="block-title">Mesin build satu-satunya</span>
+          <span class="block-ref">pola sudah terbukti hijau di ywildan/karsa</span>
+        </div>
+
+        <div class="row g2">
+          <div class="panel">
+            <div class="panel-head">Yang ada di laptop</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>git · gh · node · python3 · curl</li>
+              </ul>
+              <ul class="plain" style="margin-top: 10px">
+                <li class="no">flutter</li>
+                <li class="no">dart</li>
+                <li class="no">java / keytool</li>
+                <li class="no">Android SDK · adb</li>
+              </ul>
+              <p class="sub" style="font-size: 12px; line-height: 1.6; margin-top: 10px">
+                Konsekuensinya bukan "nanti install": GitHub Actions adalah satu-satunya tempat
+                kode ini pernah dikompilasi, dan log-nya adalah satu-satunya umpan balik yang ada.
+              </p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">Yang dihapus dari repo, sengaja</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li><span class="mono">android/</span> — dibangkitkan CI, satu manifest yang di-overlay</li>
+                <li><span class="mono">ios/</span> — tidak ditargetkan</li>
+                <li><span class="mono">build/ · .dart_tool/ · node_modules/</span></li>
+                <li><span class="mono">*.jks</span> — kunci privat tidak pernah menyentuh repo</li>
+              </ul>
+              <p class="sub" style="font-size: 12px; line-height: 1.6; margin-top: 10px">
+                Repo tidak menyimpan satu pun berkas Gradle yang harus dijaga manual. Naik versi
+                Flutter tidak menimbulkan konflik konfigurasi yang tidak bisa kita perbaiki lokal.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt24">
+          <div class="trigger">
+            <div class="trigger-name">git push → github.com/ywildan/karsa-business</div>
+            <div class="trigger-note">semua jalur di bawah berjalan di ubuntu-latest, bukan di laptop</div>
+          </div>
+          <div class="stem"></div>
+          <div class="fan" style="--cols: 3"></div>
+          <div class="row g3 branch-row">
+            <div class="cell">
+              <div class="node">
+                <div class="node-head">
+                  <span class="node-name">kb-validate.yml</span>
+                  <span class="node-cost">≤ 4 menit</span>
+                </div>
+                <div class="node-body">
+                  <ol class="steps">
+                    <li>cetak <span class="mono">flutter --version</span></li>
+                    <li><span class="mono">flutter create</span> proyek sementara</li>
+                    <li>overlay <span class="mono">pubspec · lib · test · assets</span></li>
+                    <li><span class="mono">dart format --set-exit-if-changed</span></li>
+                    <li><span class="mono">dart analyze</span> → anotasi baris</li>
+                    <li><span class="mono">flutter test</span> — termasuk SQLite via FFI</li>
+                    <li>grep rahasia → gagal kalau ketemu</li>
+                  </ol>
+                </div>
+                <div class="node-foot">
+                  <b>Tidak membangun Android.</b> Ini tempat logika dan laporan diiterasi,
+                  dan ini alasan <b>domain/</b> harus murni Dart.
+                </div>
+              </div>
+            </div>
+            <div class="cell">
+              <div class="node">
+                <div class="node-head">
+                  <span class="node-name">kb-build.yml</span>
+                  <span class="node-cost">10–16 menit</span>
+                </div>
+                <div class="node-body">
+                  <ol class="steps">
+                    <li>hanya di branch <span class="mono">main</span></li>
+                    <li>patch minSdk 23, dialek <span class="mono">.kts</span> dan Groovy</li>
+                    <li>cache <span class="mono">~/.gradle</span> — belum ada di mana pun</li>
+                    <li>keystore dari 4 secret; kosong → lanjut debug-signed</li>
+                    <li><span class="mono">flutter build apk --release</span></li>
+                    <li>gagal → ekor log jadi anotasi + artifact</li>
+                    <li>hapus keystore di <span class="mono">always()</span></li>
+                  </ol>
+                </div>
+                <div class="node-foot">
+                  Baca <b>version:</b> dari pubspec → tag <b>kb-v1.0.0</b> →
+                  <b>gh release create</b>, idempoten.
+                </div>
+              </div>
+            </div>
+            <div class="cell">
+              <div class="node">
+                <div class="node-head">
+                  <span class="node-name">debug-build.yml</span>
+                  <span class="node-cost">manual</span>
+                </div>
+                <div class="node-body">
+                  <ol class="steps">
+                    <li>dipanggil dari tombol Actions</li>
+                    <li><span class="mono">flutter build apk -v</span></li>
+                    <li>log lengkap jadi artifact</li>
+                  </ol>
+                </div>
+                <div class="node-foot">
+                  Jaring pengaman satu-satunya saat build gagal dan tidak bisa direproduksi lokal.
+                  Yang kedua: <b>Codespaces</b>, tetap Rp 0.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="split mt16">
+          <div class="panel">
+            <div class="panel-head">Dipakai apa adanya dari rumah sendiri</div>
+            <div class="panel-body">
+              <table class="spec">
+                <thead>
+                  <tr>
+                    <th>Blok</th>
+                    <th>Sumber</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="mono">flutter create</span> + overlay</td>
+                    <td class="mono sub">karsa/…/karsa-mobile-build.yml:106–117</td>
+                  </tr>
+                  <tr>
+                    <td>anotasi analyzer</td>
+                    <td class="mono sub">karsa-mobile-build.yml:137–158</td>
+                  </tr>
+                  <tr>
+                    <td>patch minSdk dua dialek</td>
+                    <td class="mono sub">karsa-mobile-build.yml:119–125</td>
+                  </tr>
+                  <tr>
+                    <td>sisip signingConfig</td>
+                    <td class="mono sub">karsa-mobile-build.yml:168–247</td>
+                  </tr>
+                  <tr>
+                    <td>rilis baca versi + tag</td>
+                    <td class="mono sub">karsa-mobile-build.yml:288–328</td>
+                  </tr>
+                  <tr>
+                    <td>fallback debug-signed</td>
+                    <td class="mono sub">campus app/…/build-flutter-apk.yml</td>
+                  </tr>
+                  <tr>
+                    <td>ekor log jadi ::error</td>
+                    <td class="mono sub">campus app/…/build-flutter-apk.yml</td>
+                  </tr>
+                  <tr>
+                    <td>runbook keystore Codespaces</td>
+                    <td class="mono sub">karsa/docs/ANDROID-RELEASE-SIGNING.md</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">Yang belum pernah ada di mesin ini</div>
+            <div class="panel-body">
+              <ul class="plain">
+                <li>Cache Gradle antar-job — satu-satunya yang benar-benar baru di pipeline ini.</li>
+                <li>Uji SQLite di dalam CI lewat <span class="mono">sqflite_common_ffi</span>, tanpa emulator.</li>
+                <li>Penguncian fitur berbasis lisensi, bukan berbasis build.</li>
+              </ul>
+              <p class="sub" style="font-size: 12px; line-height: 1.6; margin-top: 10px">
+                Yang sengaja tidak dibuat: fastlane, Play Store upload, CocoaPods, dan
+                <span class="mono">appbundle</span>. Tidak ada satu pun dari itu yang membantu
+                memasang APK di HP mahasiswa.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 10 anggaran ============ -->
+      <div class="block">
+      <div class="block-head">
+        <span class="block-num">10</span>
+        <span class="block-title">Anggaran Rp 0 dan plafon sebenarnya</span>
+        <span class="block-ref">setiap angka butuh tanggal verifikasi</span>
+      </div>
+      <p class="lead">
+        Konvensi yang dipakai Karsa Circle di dokumen biayanya: angka gratis hari ini bukan angka
+        gratis selamanya. Kolom terakhir diisi pada saat batasnya benar-benar diperiksa — bukan
+        disalin dari halaman pemasaran.
+      </p>
+
+      <table class="spec mt16">
+        <thead>
+          <tr>
+            <th>Layanan</th>
+            <th>Tingkatan</th>
+            <th>Plafon yang benar-benar membatasi</th>
+            <th>Diverifikasi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GitHub repositori + Releases</td>
+            <td class="mono sub">private</td>
+            <td>Releases dan penyimpanan artefak tidak membatasi pada skala ini.</td>
+            <td class="mono c">☐</td>
+          </tr>
+          <tr>
+            <td>GitHub Actions</td>
+            <td class="mono sub">ubuntu-latest</td>
+            <td>2.000 menit / bulan dan 512 MB cache. Build Android 10–16 menit → ± 70 build. Sumber daya termahal di proyek ini.</td>
+            <td class="mono c">☐</td>
+          </tr>
+          <tr>
+            <td>Neon Postgres</td>
+            <td class="mono sub">Free · Singapura</td>
+            <td>0,5 GB dan 100 CU-jam. Baris pembukuan sangat kecil; yang menghabiskan kredit adalah pola bangun-tidur, bukan jumlah kueri.</td>
+            <td class="mono c">☐</td>
+          </tr>
+          <tr>
+            <td>Cloudflare Workers</td>
+            <td class="mono sub">Free</td>
+            <td>100.000 permintaan / hari, 10 ms CPU per permintaan. Pemakaian komersial diizinkan di sini.</td>
+            <td class="mono c">☐</td>
+          </tr>
+          <tr>
+            <td>Vercel — dashboard</td>
+            <td class="mono sub">Hobby</td>
+            <td>100 GB keluar, 1 juta invokasi, 360 GB-jam memori terprovisi, 1 cron per hari. Ini yang paling rawan, lihat blok 11.</td>
+            <td class="mono c">☐</td>
+          </tr>
+          <tr>
+            <td>Distribusi APK</td>
+            <td class="mono sub">GitHub Releases</td>
+            <td>Tanpa biaya. Bukan tanpa konsekuensi: tidak ada pembaruan otomatis.</td>
+            <td class="mono c">☑ 2026-09-27</td>
+          </tr>
+          <tr>
+            <td>Google Play Console</td>
+            <td class="mono sub">tidak dipakai</td>
+            <td>Rp 400 ribuan sekali bayar membatalkan seluruh target nol. Tidak dipasang.</td>
+            <td class="mono c">☑ 2026-09-27</td>
+          </tr>
+          <tr>
+            <td>Domain</td>
+            <td class="mono sub">*.vercel.app</td>
+            <td>Gratis. Domain .id kalau nanti dipakai bukan biaya bulanan, tapi tahunan.</td>
+            <td class="mono c">☐</td>
+          </tr>
+          <tr>
+            <td>Payment gateway</td>
+            <td class="mono sub">tidak dipakai</td>
+            <td>Pungutan luar sistem + kode lisensi. Tidak ada persentase per transaksi.</td>
+            <td class="mono c">☑ 2026-09-27</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="row g3 mt16">
+        <div class="node">
+          <div class="node-head">
+            <span class="node-name">Neon tertidur</span>
+            <span class="node-cost">1–3 detik</span>
+          </div>
+          <div class="node-body">
+            <p class="sub" style="font-size: 12px; line-height: 1.6">
+              Bangun dari tidur terjadi setelah ± 5 menit menganggur. Sinkron dilakukan pengguna dan
+              dashboard dibuka sesekali, jadi frekuensinya rendah. Tandai "memuat" di UI, beri batas
+              waktu kueri 8 detik.
+            </p>
+          </div>
+          <div class="node-foot">
+            <b class="alert">Jangan</b> menambahkan ping penghangat. Kueri jantung justru
+            memakan kredit yang ingin dihemat.
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-head">
+            <span class="node-name">Menit Actions</span>
+            <span class="node-cost">sumber daya mahal</span>
+          </div>
+          <div class="node-body">
+            <p class="sub" style="font-size: 12px; line-height: 1.6">
+              Pekerjaan logika di job 4 menit, build Android hanya dari <span class="mono">main</span>,
+              dan <span class="mono">cancel-in-progress</span> pada semua job yang bisa dibatalkan.
+              Satu APK, bukan matriks dua edisi.
+            </p>
+          </div>
+          <div class="node-foot">
+            Kalau frekuensi build naik: <b>jadikan repo publik</b>, menit build Android menjadi bebas.
+          </div>
+        </div>
+        <div class="node">
+          <div class="node-head">
+            <span class="node-name">Neon cabang</span>
+            <span class="node-cost">jebakan sunyi</span>
+          </div>
+          <div class="node-body">
+            <p class="sub" style="font-size: 12px; line-height: 1.6">
+              Cabang uji CI dibuat lalu dihapus dalam hitungan menit. Jangan pernah membuat satu
+              cabang per pengguna atau per perangkat: cabang tidak aktif akan berakhir dihapus.
+            </p>
+          </div>
+          <div class="node-foot">Satu-satunya cabang tetap adalah <b>main</b>.</div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ============ 11 risiko ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">11</span>
+          <span class="block-title">Risiko yang tidak dikubur</span>
+          <span class="block-ref">dibaca sebelum commit pertama</span>
+        </div>
+
+        <table class="spec">
+          <thead>
+            <tr>
+              <th>Risiko</th>
+              <th>Bekas yang ditinggalkan</th>
+              <th>Yang kita lakukan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="badge badge--accent">ToS</span><br />
+                Vercel Hobby melarang pemakaian yang mencari pendapatan, dan produk versi 2 dijual.
+              </td>
+              <td>Bisa berujung penonaktifan deployment, bukan tagihan — dan kejadiannya di luar kendali kita.</td>
+              <td>
+                Jalur API yang menghasilkan uang sudah dipindah ke Cloudflare Workers yang mengizinkan
+                komersial; Vercel hanya memegang dashboard baca-saja. Naik tingkat saat lisensi
+                pertama benar-benar terjual.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge badge--accent">User</span><br />
+                Sideload: Android 14/15 memperingatkan sumber tidak dikenal, dan Play Protect bisa menolak.
+              </td>
+              <td>Beban dukungan nyata. Sebagian pengguna tidak akan selesai memasang, dan tidak akan melapor — mereka berhenti.</td>
+              <td>
+                Halaman rilis berbahasa Indonesia dengan langkah konkret, APK selalu release-signed
+                (skema v2), dan satu percobaan pasang di HP asli sebelum v1 dinyatakan selesai.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge">User</span><br />
+                Tidak ada pembaruan otomatis pada APK yang dipasang manual.
+              </td>
+              <td>Pengguna tetap di versi lama selama berbulan-bulan, termasuk kalau ada salah hitung laporan.</td>
+              <td>Satu penanda "versi baru tersedia" yang membaca GitHub Releases publik, tanpa login dan tanpa biaya.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge">Alat</span><br />
+                Flutter pin 3.47.0 mungkin membawa Dart di bawah batas bawah versi terbaru sqflite.
+              </td>
+              <td>Langsung di job validate pertama, bukan di build Android.</td>
+              <td>Job <span class="mono">kb-validate</span> mencetak <span class="mono">flutter --version</span> lebih dulu; pin ditetapkan dari log itu, bukan dari tebakan.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge">Proses</span><br />
+                Tidak ada <span class="mono">flutter run</span> dan tidak ada <span class="mono">adb</span>: kesalahan UI baru terlihat setelah build 15 menit.
+              </td>
+              <td>Iterasi UI lambat, godaan untuk mengirim tanpa menguji.</td>
+              <td>Logika dipindah ke domain murni Dart yang teruji di job 4 menit. Verifikasi fungsi dilakukan manusia, di HP, di blok "Verifikasi".</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge">Keamanan</span><br />
+                Kunci privat penanda tangan bocor.
+              </td>
+              <td>Seluruh APK Karsa Business yang pernah terbit tidak bisa dipercaya lagi.</td>
+              <td>Keystore baru khusus produk ini, dibuat di Codespaces, dikirim ke secret lewat pipa tanpa ditampilkan, dan tidak pernah diunggah sebagai artefak workflow.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge">Privasi</span><br />
+                Data pendapatan dan nomor telepon pelanggan naik ke cloud di versi 2.
+              </td>
+              <td>Kehilangan kepercayaan mahal pada pasar yang isinya teman sekampus.</td>
+              <td>Versie 1 tanpa jaringan sama sekali; sinkronisasi hanya terjadi setelah pengguna menekan tombol; kolom yang disinkronkan didaftarkan eksplisit, bukan seluruh baris.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="badge">Desain</span><br />
+                Double-entry terlalu berat untuk pengguna sasaran.
+              </td>
+              <td>Aplikasi yang benar secara akuntansi tapi tidak pernah diisi orang.</td>
+              <td>Antarmuka hanya mengenal kata pemasukan, pengeluaran, penjualan, modal, utang. Skema dua sisi disembunyikan, dan itu diuji pada pengguna pertama sebelum fitur apa pun ditambah.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ============ 12 roadmap ============ -->
+      <div class="block">
+        <div class="block-head">
+          <span class="block-num">12</span>
+          <span class="block-title">Urutan pengerjaan</span>
+          <span class="block-ref">satu commit = satu pemeriksaan</span>
+        </div>
+
+        <div class="loop">
+          <div class="l-n">C0</div>
+          <div class="l-cmd">Dokumen ini + kerangka repo<span>Berkas ini, README, .gitignore, inisialisasi git, dan repositori GitHub. Tidak ada kode.</span></div>
+          <div class="l-t">tanpa CI</div>
+
+          <div class="l-n">C1</div>
+          <div class="l-cmd">Domain murni Dart + job validate<span>Uang, bagan akun, mesin jurnal, dan ujinya. Membuktikan toolchain + overlay + analyzer + test hijau.</span></div>
+          <div class="l-t">≤ 4 menit</div>
+
+          <div class="l-n">C2</div>
+          <div class="l-cmd">Lapisan SQLite + laporan<span>Skema, repositori, outbox <span class="mono">dirty</span>, dan uji basis data yang berjalan di VM tanpa emulator.</span></div>
+          <div class="l-t">≤ 5 menit</div>
+
+          <div class="l-n">C3</div>
+          <div class="l-cmd">Antarmuka v1 + APK pertama<span>Tema, navigasi, form transaksi, dashboard bulanan. Build Android pertama yang benar-benar terpasang di HP.</span></div>
+          <div class="l-t">10–16 menit</div>
+
+          <div class="l-n">C4</div>
+          <div class="l-cmd">Penandaan rilis + GitHub Release<span>Empat secret signing diisi, APK release-signed terbit sebagai rilis. <b>Versi 1 gratis dinyatakan jadi.</b></span></div>
+          <div class="l-t">butuh kamu</div>
+
+          <div class="l-n">C5</div>
+          <div class="l-cmd">API + dashboard web<span>Skema Neon diterapkan, Worker lisensi dan sinkron, halaman dashboard statis.</span></div>
+          <div class="l-t">butuh akun cloud</div>
+
+          <div class="l-n">C6</div>
+          <div class="l-cmd">Lisensi + sinkron + pembuka fitur<span>Tukar kode menjadi fitur, dan uji ketahanan: offline tiga minggu, dibunuh di tengah jalan.</span></div>
+          <div class="l-t">butuh akun cloud</div>
+        </div>
+
+        <div class="note mt16">
+          <b>Berhenti rapi di C4.</b> C0 sampai C4 tidak memerlukan satu pun akun baru: hanya
+          GitHub, yang sudah ada. C5 dan C6 minta Neon, Cloudflare, dan Vercel milikmu, plus satu
+          langkah yang tidak bisa dikerjakan dari laptop ini — membuat keystore di Codespaces.
+          Fondasi versi 1 gratis harus terbukti berjalan sebelum satu rupiah pun dipikirkan untuk
+          versi 2.
+        </div>
+      </div>
+
+      <div class="footnote">
+        Ditulis 27 September 2026 untuk <b>Karsa Business</b>, produk keempat Karsa Ecosystem.
+        Setiap klaim teknis di atas dapat dilacak ke berkas yang benar-benar ada:
+        pola build dari <span class="mono">ywildan/karsa · karsa-mobile-build.yml</span> (sudah
+        terbukti menghasilkan APK bertanda tangan di akun ini), doktrin nol biaya dari
+        <span class="mono">Karsa Circle/docs/10–12</span>, batasan tulisan dari
+        <span class="mono">Karsa Ecosystem/docs/03</span>, bahasa warna dari
+        <span class="mono">campus app/lib/theme/app_theme.dart</span>, dan posisi katalog dari
+        <span class="mono">Karsa Ecosystem/content/products.ts</span>.
+        Yang belum dibuktikan diucapkan sebagai belum dibuktikan: verifikasi batas gratis
+        bertanda ☐, seluruh jalur versi 2, dan penerimaan pengguna atas aplikasi yang dipasang manual.
+      </div>
+    </div>
+  </body>
+</html>
