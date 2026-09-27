@@ -63,21 +63,13 @@ enum AccountCode {
 }
 
 /// Bagan akun yang ditaburkan ke setiap usaha baru.
+///
+/// Diturunkan dari [AccountCode], supaya menambah satu enum saja sudah cukup
+/// dan daftar ini tidak bisa tertinggal.
 abstract final class ChartOfAccounts {
-  static const List<String> systemCodes = [
-    AccountCode.kas.code,
-    AccountCode.bank.code,
-    AccountCode.piutang.code,
-    AccountCode.persediaan.code,
-    AccountCode.hutang.code,
-    AccountCode.modal.code,
-    AccountCode.prive.code,
-    AccountCode.penjualan.code,
-    AccountCode.returPenjualan.code,
-    AccountCode.pendapatanLain.code,
-    AccountCode.hpp.code,
-    AccountCode.bebanOperasional.code,
+  static List<String> get systemCodes => [
+    for (final account in AccountCode.values) account.code,
   ];
 
-  static bool isSystem(String code) => systemCodes.contains(code);
+  static bool isSystem(String code) => AccountCode.fromCode(code) != null;
 }

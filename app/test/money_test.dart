@@ -38,7 +38,10 @@ void main() {
     });
 
     test('nilai yang sama menempati satu tempat di himpunan', () {
-      expect({const Money(100), const Money(100)}.length, 1);
+      final tulis = const Money(100);
+      final dariKetikan = Money.tryParse('100')!;
+      expect(dariKetikan.hashCode, tulis.hashCode);
+      expect({tulis, dariKetikan}.length, 1);
     });
 
     test('bisa diurutkan', () {

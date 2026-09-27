@@ -66,10 +66,8 @@ jobs:
         working-directory: ${{ env.BUILD_DIR }}
         run: flutter pub get
 
-      - name: Format source
-        working-directory: ${{ env.BUILD_DIR }}
-        run: dart format lib test
-
+      # Sebelum diformat, supaya baris yang dilaporkan analyzer menunjuk ke
+      # nomor baris yang benar-benar ada di repo.
       - name: Analyze source
         working-directory: ${{ env.BUILD_DIR }}
         shell: bash
@@ -77,15 +75,22 @@ jobs:
           set -euo pipefail
           dart analyze --format=machine . > flutter-analyze.log || true
           while IFS='|' read -r severity _type code file line column _length message; do
+            # Analyzer berjalan di salinan build; petakan kembali ke sumber yang dilacak git.
+            tracked="$file"
+            case "$file" in
+              "$BUILD_DIR"/lib/*|"$BUILD_DIR"/test/*|"$BUILD_DIR"/pubspec.yaml)
+                tracked="app/${file#"$BUILD_DIR"/}"
+                ;;
+            esac
             case "$severity" in
               ERROR)
-                echo "::error file=$file,line=$line,col=$column::$code: $message"
+                echo "::error file=$tracked,line=$line,col=$column::$code: $message"
                 ;;
               WARNING)
-                echo "::warning file=$file,line=$line,col=$column::$code: $message"
+                echo "::warning file=$tracked,line=$line,col=$column::$code: $message"
                 ;;
               INFO)
-                echo "::notice file=$file,line=$line,col=$column::$code: $message"
+                echo "::notice file=$tracked,line=$line,col=$column::$code: $message"
                 ;;
             esac
           done < flutter-analyze.log
@@ -94,6 +99,10 @@ jobs:
             exit 1
           fi
           echo "The analyzer reported no errors."
+
+      - name: Format source
+        working-directory: ${{ env.BUILD_DIR }}
+        run: dart format lib test
 
       - name: Run tests
         working-directory: ${{ env.BUILD_DIR }}

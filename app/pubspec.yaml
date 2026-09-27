@@ -3,14 +3,26 @@ description: Pembukuan bisnis kecil untuk mahasiswa.
 publish_to: "none"
 version: 1.0.0+1
 
+# Setiap versi ditulis mutlak, tanpa caret. Yang membangun aplikasi ini adalah
+# GitHub Actions, bukan mesin pengembang, jadi satu-satunya cara memastikan
+# build hari ini dan build bulan depan memakai kode yang sama adalah dengan
+# tidak membiarkan resolver memilih sendiri.
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.13.0 <4.0.0"
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  crypto: 3.0.7
+  fl_chart: 1.2.0
+  http: 1.6.0
+  intl: 0.20.3
+  # Kunci dibuat di perangkat, supaya dua hp yang berbulan-bulan offline tidak
+  # menabrak identitas catatan yang sama saat akhirnya sinkron.
+  uuid: 4.6.0
 
 dev_dependencies:
+  flutter_lints: 6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: 6.0.0
