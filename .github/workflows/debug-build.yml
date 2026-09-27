@@ -75,19 +75,9 @@ jobs:
 
       # Sama seperti build sungguhan: tanpa ini kegagalan di sini bisa punya
       # sebab yang berbeda dari kegagalan yang sedang kita cari.
-      - name: Set Android minimum SDK
+      - name: Check Android minimum SDK
         shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f "$BUILD_DIR/android/app/build.gradle.kts" ]; then
-            gradle="$BUILD_DIR/android/app/build.gradle.kts"
-            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' "$gradle"
-            grep -q "minSdk = 23" "$gradle"
-          else
-            gradle="$BUILD_DIR/android/app/build.gradle"
-            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' "$gradle"
-            grep -q "minSdkVersion 23" "$gradle"
-          fi
+        run: bash tool/check-android-floor.sh "$BUILD_DIR"
 
       - name: Resolve dependencies in CI
         working-directory: ${{ env.BUILD_DIR }}

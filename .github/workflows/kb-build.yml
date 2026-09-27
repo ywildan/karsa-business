@@ -71,25 +71,12 @@ jobs:
             cp -R app/assets/. "$BUILD_DIR/assets/"
           fi
 
-      # sqflite minta API 23 ke atas. Dialek Gradle-nya ikut dua-duanya karena
-      # flutter create pernah berganti dari Groovy ke .kts di tengah jalan.
-      # Kalau suatu hari polanya berubah lagi, langkah ini harus berhenti di
-      # sini, bukan diam-diam menghasilkan APK dengan minSdk warisan template.
-      - name: Set Android minimum SDK
+      # Lantai Android bukan angka yang kita tetapkan sendiri, dan APK hasil
+      # AGP 9 hanya ditandatangani scheme v2. Penjelasannya panjang; ia tinggal
+      # di dalam skripnya sendiri.
+      - name: Check Android minimum SDK
         shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f "$BUILD_DIR/android/app/build.gradle.kts" ]; then
-            gradle="$BUILD_DIR/android/app/build.gradle.kts"
-            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' "$gradle"
-            grep -q "minSdk = 23" "$gradle"
-          else
-            gradle="$BUILD_DIR/android/app/build.gradle"
-            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' "$gradle"
-            grep -q "minSdkVersion 23" "$gradle"
-          fi
-          echo "minSdk dibaca dari $gradle:"
-          grep -n "minSdk" "$gradle" | sed 's/^/  /'
+        run: bash tool/check-android-floor.sh "$BUILD_DIR"
 
       - name: Cache Gradle
         uses: actions/cache@v4

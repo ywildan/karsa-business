@@ -51,8 +51,9 @@ menanggung risiko itu.
 
 | Workflow | Kapan | Hasil |
 |---|---|---|
-| `kb-validate.yml` | tiap push dan PR | format, analyzer, `flutter test` di VM. Tidak menyentuh Gradle. |
+| `kb-validate.yml` | tiap push dan PR | format, analyzer, `flutter test` di VM; ikut men-parse semua berkas workflow. Tidak menyentuh Gradle. |
 | `kb-build.yml` | push ke `main` yang menyentuh `app/**`, atau manual | APK release universal + Release GitHub kalau secret sudah lengkap |
+| `debug-build.yml` | manual saja, saat `kb-build` merah dan ekornya tidak menjelaskan | build yang sama persis dengan `-v`; log utuh dikirim sebagai artifact 7 hari |
 | `kb-release.yml` | nanti, saat ada pembaruan aplikasi | belum ada — lihat "Setelah v1" di bawah |
 
 `kb-build.yml` sengaja **tidak** menggagalkan build kalau keempat secret belum
@@ -60,6 +61,22 @@ ada: ia menandai `configured=false` dan tetap menghasilkan APK release ber-signi
 debug. Itu cara membuktikan seluruh jalur Gradle sebelum keystore ada. Konsekuensinya
 harus diketahui: **APK debug-signed dan release-signed tidak bisa saling menimpa.**
 Sebelum memasang APK ber-signing permanen yang pertama, uninstall versi sebelumnya.
+
+## Lantai Android: 7.0
+
+APK pertama yang ter-build (run 36342528276) diperiksa isi artefaknya, dan ia
+**tidak punya entri `META-INF/*.SF` maupun `*.RSA` sama sekali**: AGP 9.1.0
+menandatangani dengan scheme v2 saja. Scheme v2 baru dikenali Android mulai API
+24. Dulu workflow menambal `minSdk` ke 23 — pola warisan dari repo Karsa yang
+lain, tempat tambalnya menaikkan lantai, bukan menurunkan. Di Flutter 3.47
+lantai bawaan sudah 24, sehingga tambalan itu cuma menghasilkan aplikasi yang
+berjanji bisa dipasang di Android 6 padahal tanda tangannya tidak bisa
+diverifikasi di sana.
+
+Sekarang tidak ada satu pun berkas Gradle yang disunting. `tool/check-android-floor.sh`
+membaca `minSdkVersion` dari SDK yang terpasang di runner dan membuat build
+berhenti kalau lantai turun di bawah 24. Jadi **Karsa Business membutuhkan
+Android 7.0 ke atas**, dan janji itu dijaga mesin, bukan oleh catatan di README.
 
 ## Verifikasi tanpa adb
 
@@ -80,8 +97,13 @@ dan angka.
 
 | Tahap | Run | Commit | Artifact | sha256 |
 |---|---|---|---|---|
-| APK debug-signed pertama | | | | |
+| APK debug-signed pertama | [36342528276](https://github.com/ywildan/karsa-business/actions/runs/36342528276) | `bbcd184` | 10939751969 | `77eda82118d0716ce7e3ef7e0cda1e27fe99d8854f7dc611b41b89defadfdaa8` |
 | APK release-signed pertama | | | | |
+
+Ukuran APK universal itu 51,5 MB sebelum dikompres, 23,8 MB setelah: satu
+berkas memuat `libapp.so` dan `libflutter.so` untuk tiga ABI, karena fitur pro
+dibuka oleh lisensi, bukan oleh build terpisah. Yang diunduh pengguna hanyalah
+bagian yang dibutuhkan hp-nya.
 
 Diisi begitu tiap baris benar-benar ada. Tabel ini dibiarkan kosong daripada
 terisi perkiraan.

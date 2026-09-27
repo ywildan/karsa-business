@@ -1395,7 +1395,7 @@
                 <div class="node-body">
                   <ol class="steps">
                     <li>hanya di branch <span class="mono">main</span></li>
-                    <li>patch minSdk 23, dialek <span class="mono">.kts</span> dan Groovy</li>
+                    <li>lantai Android dibaca dari SDK, berhenti kalau &lt; 24</li>
                     <li>cache <span class="mono">~/.gradle</span> — belum ada di mana pun</li>
                     <li>keystore dari 4 secret; kosong → lanjut debug-signed</li>
                     <li><span class="mono">flutter build apk --release</span></li>
@@ -1452,8 +1452,9 @@
                     <td class="mono sub">karsa-mobile-build.yml:137–158</td>
                   </tr>
                   <tr>
-                    <td>patch minSdk dua dialek</td>
-                    <td class="mono sub">karsa-mobile-build.yml:119–125</td>
+                    <td><b>tidak jadi dipakai:</b> tambal minSdk</td>
+                    <td class="mono sub">karsa-mobile-build.yml:119–125 — di Flutter
+                      3.47 lantainya sudah 24, menambalnya ke 23 justru merusak</td>
                   </tr>
                   <tr>
                     <td>sisip signingConfig</td>
