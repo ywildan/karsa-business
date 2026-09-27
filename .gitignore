@@ -60,3 +60,8 @@ Thumbs.db
 # Qoder Sites
 .qoder/
 *.qoder.site
+
+# Perkakas verifikasi lokal: tool/*.py pernah di-import lewat REPL dan
+# meninggalkan direktori ini di sisi repo.
+__pycache__/
+*.pyc
