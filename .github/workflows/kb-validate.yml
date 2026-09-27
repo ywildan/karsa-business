@@ -29,6 +29,42 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Parser YAML satu-satunya yang kita punya adalah Actions sendiri, dan ia
+      # baru parse workflow yang dijalankan. Kesalahan ketik di debug-build.yml
+      # tidak akan pernah terlihat sampai tombolnya ditekan, jadi semua berkas
+      # workflow diperiksa di loop murah ini. venv dipakai karena pip tolak
+      # memasang ke sistem Python pada runner Ubuntu.
+      - name: Parse workflow files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .yaml-env
+          .yaml-env/bin/pip install --quiet --disable-pip-version-check pyyaml
+          .yaml-env/bin/python - <<'PY'
+          import glob
+          import sys
+          import yaml
+
+          broken = []
+          files = sorted(glob.glob(".github/workflows/*.yml"))
+          for path in files:
+              try:
+                  with open(path, encoding="utf-8") as handle:
+                      yaml.safe_load(handle)
+              except Exception as problem:
+                  broken.append(f"{path}: {problem}")
+                  continue
+              print(f"{path} parses.")
+          if not files:
+              print("::error::No workflow files found.")
+              sys.exit(1)
+          if broken:
+              print("::error::Workflow YAML is not parseable.")
+              for line in broken:
+                  print("  " + line)
+              sys.exit(1)
+          PY
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
