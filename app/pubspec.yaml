@@ -18,6 +18,11 @@ dependencies:
   fl_chart: 1.2.0
   http: 1.6.0
   intl: 0.20.3
+  path: 1.9.1
+  # Basis data relasional, bukan dokumen json: jurnal banyak baris dan neraca
+  # saldo butuh join. Paketnya murni di atas sqlite3 bawaan Android, jadi tidak
+  # menambah plugin native yang harus di-compile.
+  sqflite: 2.4.4
   # Kunci dibuat di perangkat, supaya dua hp yang berbulan-bulan offline tidak
   # menabrak identitas catatan yang sama saat akhirnya sinkron.
   uuid: 4.6.0
@@ -26,3 +31,6 @@ dev_dependencies:
   flutter_lints: 6.0.0
   flutter_test:
     sdk: flutter
+  # Uji lapisan data di atas sqlite3 asli milik runner Ubuntu: skema, foreign
+  # key dan trigger diawasi benar-benar berjalan, tanpa emulator.
+  sqflite_common_ffi: 2.4.3

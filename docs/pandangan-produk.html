@@ -1000,7 +1000,6 @@
                 <li>business — satu usaha, satu namespace</li>
                 <li>party — pelanggan / pemasok / keduanya</li>
                 <li>item — produk, harga jual, modal, flag stok</li>
-                <li>category — penanda kelompok pengeluaran</li>
               </ul>
             </div>
           </div>
@@ -1011,6 +1010,7 @@
             <div class="node-body">
               <ul class="plain">
                 <li>account — bagan akun yang disemai</li>
+                <li>pengelompokan lewat sub-akan, misal <span class="mono">6200.01</span></li>
                 <li>ledger_entry — satu kejadian transaksi</li>
                 <li>ledger_line — sisi debit ATAU kredit</li>
                 <li>stock_movement — masuk/keluar barang</li>
@@ -1024,7 +1024,7 @@
             <div class="node-body">
               <ul class="plain">
                 <li>meta — device_id, kursor rev, offset jam</li>
-                <li>license — kode, token pemilik, cek terakhir</li>
+                <li>lisensi di hp — penyimpanan aman, bukan tabel</li>
                 <li>di server: owner, license, device</li>
               </ul>
             </div>
@@ -1060,9 +1060,9 @@
           <div class="panel">
             <div class="panel-head">Kolom wajib di tiap baris sinkron</div>
             <div class="panel-body">
-              <pre class="code"><span class="k">id</span>          uuid dibuat perangkat, kunci utama
-<span class="k">created_at</span>  mikrotik
-<span class="k">updated_at</span>  mikrotik; di-stempel ulang server
+              <pre class="code"><span class="k">id</span>          uuid dibuat perangkat; baris semaian diturunkan dari isinya
+<span class="k">created_at</span>  mikrodetik
+<span class="k">updated_at</span>  mikrodetik; di-stempel ulang server
 <span class="k">deleted</span>     0/1 tombstone, bukan hapus fisik
 <span class="k">dirty</span>       1 = menunggu dikirim (indeks parsial)
 <span class="k">device_id</span>   siapa pengubah terakhir

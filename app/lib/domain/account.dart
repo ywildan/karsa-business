@@ -63,13 +63,31 @@ enum AccountCode {
 }
 
 /// Bagan akun yang ditaburkan ke setiap usaha baru.
-///
-/// Diturunkan dari [AccountCode], supaya menambah satu enum saja sudah cukup
-/// dan daftar ini tidak bisa tertinggal.
 abstract final class ChartOfAccounts {
-  static List<String> get systemCodes => [
-    for (final account in AccountCode.values) account.code,
+  /// Sembilan pos yang pasti dipakai siapa pun yang mencatat: tanpa salah
+  /// satunya, piutang atau harga pokok tidak punya tempat jatuh.
+  static const List<AccountCode> seed = [
+    AccountCode.kas,
+    AccountCode.piutang,
+    AccountCode.persediaan,
+    AccountCode.hutang,
+    AccountCode.modal,
+    AccountCode.prive,
+    AccountCode.penjualan,
+    AccountCode.hpp,
+    AccountCode.bebanOperasional,
   ];
 
-  static bool isSystem(String code) => AccountCode.fromCode(code) != null;
+  /// Tidak ditaburkan sendiri: tidak setiap usaha punya rekening bank atau
+  /// menerima barang kembali.
+  static const List<AccountCode> optional = [
+    AccountCode.bank,
+    AccountCode.returPenjualan,
+    AccountCode.pendapatanLain,
+  ];
+
+  static List<String> get seedCodes => [for (final a in seed) a.code];
+
+  /// Pos semaian menahan laporan tetap terbaca, jadi tidak bisa dihapus.
+  static bool isSeeded(String code) => seed.any((a) => a.code == code);
 }
