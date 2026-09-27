@@ -11,7 +11,10 @@ class KarsaBusinessApp extends StatelessWidget {
       title: 'Karsa Business',
       home: Scaffold(
         body: Center(
-          child: Text('Karsa Business', style: Theme.of(context).textTheme.headlineSmall),
+          child: Text(
+            'Karsa Business',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
         ),
       ),
     );

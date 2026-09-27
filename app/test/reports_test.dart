@@ -16,10 +16,7 @@ void main() {
       post(
         '1',
         DateTime(2026, 9, 1),
-        const PostRequest(
-          kind: EntryKind.modalAwal,
-          amount: Money(300000),
-        ),
+        const PostRequest(kind: EntryKind.modalAwal, amount: Money(300000)),
       ),
       post(
         '2',
@@ -67,10 +64,7 @@ void main() {
   });
 
   test('saldo dibaca dari sisi akun yang benar', () {
-    expect(
-      Reports.balanceOfCode(books, AccountCode.kas.code),
-      Money(330000),
-    );
+    expect(Reports.balanceOfCode(books, AccountCode.kas.code), Money(330000));
     expect(
       Reports.balanceOfCode(books, AccountCode.piutang.code),
       Money(10000),
@@ -79,10 +73,7 @@ void main() {
       Reports.balanceOfCode(books, AccountCode.persediaan.code),
       Money(-10000),
     );
-    expect(
-      Reports.balanceOfCode(books, AccountCode.modal.code),
-      Money(300000),
-    );
+    expect(Reports.balanceOfCode(books, AccountCode.modal.code), Money(300000));
   });
 
   test('laba rugi bukan sama dengan sisa uang di kas', () {
@@ -91,7 +82,10 @@ void main() {
     expect(pl.expense, Money(15000));
     expect(pl.profit, Money(30000));
     expect(pl.marginPercent, 67);
-    expect(Reports.balanceOfCode(books, AccountCode.kas.code), isNot(pl.profit));
+    expect(
+      Reports.balanceOfCode(books, AccountCode.kas.code),
+      isNot(pl.profit),
+    );
   });
 
   test('aset = kewajiban + modal + laba', () {
@@ -102,17 +96,20 @@ void main() {
     expect(assets, liabilities + equity + pl.profit);
   });
 
-  test('arus kas harian hanya memuat hari ketika uang benar-benar bergerak', () {
-    final flow = Reports.cashFlowByDay(books);
-    expect(flow.map((day) => day.day.day).toList(), [1, 2, 3, 5]);
-    expect(flow.first.inflow, Money(300000));
-    expect(flow[2].outflow, Money(5000));
-    expect(flow.last.net, Money(10000));
-    expect(
-      flow.fold<Money>(Money.zero, (sum, day) => sum + day.net),
-      Money(330000),
-    );
-  });
+  test(
+    'arus kas harian hanya memuat hari ketika uang benar-benar bergerak',
+    () {
+      final flow = Reports.cashFlowByDay(books);
+      expect(flow.map((day) => day.day.day).toList(), [1, 2, 3, 5]);
+      expect(flow.first.inflow, Money(300000));
+      expect(flow[2].outflow, Money(5000));
+      expect(flow.last.net, Money(10000));
+      expect(
+        flow.fold<Money>(Money.zero, (sum, day) => sum + day.net),
+        Money(330000),
+      );
+    },
+  );
 
   test('penjualan belum dibayar tidak menggerakkan kas', () {
     expect(Reports.cashFlowByDay([books[3]]), isEmpty);
@@ -141,9 +138,10 @@ void main() {
 
   test('akun dikelompokkan sesuai jenisnya', () {
     expect(
-      Reports.byAccount(books, type: AccountType.expense)
-          .map((row) => row.accountCode)
-          .toList(),
+      Reports.byAccount(
+        books,
+        type: AccountType.expense,
+      ).map((row) => row.accountCode).toList(),
       [AccountCode.hpp.code, AccountCode.bebanOperasional.code],
     );
   });

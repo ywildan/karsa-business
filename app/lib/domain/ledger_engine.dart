@@ -144,16 +144,16 @@ abstract final class LedgerEngine {
       kind == EntryKind.pembayaranHutang;
 
   static String _revenueTarget(PostRequest request) => _requireType(
-        request.targetAccountCode,
-        AccountType.revenue,
-        'Pilih sumber pendapatannya dulu.',
-      );
+    request.targetAccountCode,
+    AccountType.revenue,
+    'Pilih sumber pendapatannya dulu.',
+  );
 
   static String _expenseTarget(PostRequest request) => _requireType(
-        request.targetAccountCode,
-        AccountType.expense,
-        'Pilih pos bebannya dulu.',
-      );
+    request.targetAccountCode,
+    AccountType.expense,
+    'Pilih pos bebannya dulu.',
+  );
 
   /// Membuat entri siap simpan, sekaligus menolak jurnal yang tidak seimbang.
   static LedgerEntry entry({
@@ -213,11 +213,7 @@ abstract final class LedgerEngine {
     }
   }
 
-  static String _requireType(
-    String? code,
-    AccountType expected,
-    String hint,
-  ) {
+  static String _requireType(String? code, AccountType expected, String hint) {
     if (code == null || code.trim().isEmpty) {
       throw LedgerException('account_required', hint);
     }

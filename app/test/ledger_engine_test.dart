@@ -37,8 +37,10 @@ void main() {
       for (final kind in EntryKind.values) {
         final lines = LedgerEngine.linesFor(requestFor(kind));
         final debit = lines.fold<Money>(Money.zero, (sum, l) => sum + l.debit);
-        final credit =
-            lines.fold<Money>(Money.zero, (sum, l) => sum + l.credit);
+        final credit = lines.fold<Money>(
+          Money.zero,
+          (sum, l) => sum + l.credit,
+        );
         expect(debit, credit, reason: 'tidak seimbang: ${kind.code}');
         expect(debit.isPositive, isTrue, reason: 'nominal nol: ${kind.code}');
       }
@@ -89,9 +91,12 @@ void main() {
           AccountCode.persediaan.code,
         ]),
       );
-      final hpp = lines.firstWhere((l) => l.accountCode == AccountCode.hpp.code);
-      final stok = lines
-          .firstWhere((l) => l.accountCode == AccountCode.persediaan.code);
+      final hpp = lines.firstWhere(
+        (l) => l.accountCode == AccountCode.hpp.code,
+      );
+      final stok = lines.firstWhere(
+        (l) => l.accountCode == AccountCode.persediaan.code,
+      );
       expect(hpp.debit, Money(10000));
       expect(stok.credit, Money(10000));
     });
@@ -132,9 +137,7 @@ void main() {
         EntryKind.pembayaranHutang,
       ]) {
         expect(
-          () => LedgerEngine.linesFor(
-            PostRequest(kind: kind, amount: amount),
-          ),
+          () => LedgerEngine.linesFor(PostRequest(kind: kind, amount: amount)),
           throwsLedger('party_required'),
           reason: kind.code,
         );
@@ -247,6 +250,5 @@ void main() {
 
 /// Memastikan kegagalan yang diharapkan berasal dari mesin jurnal, bukan dari
 /// kesalahan lain yang kebetulan melempar.
-Matcher throwsLedger(String code) => throwsA(
-      isA<LedgerException>().having((e) => e.code, 'code', code),
-    );
+Matcher throwsLedger(String code) =>
+    throwsA(isA<LedgerException>().having((e) => e.code, 'code', code));

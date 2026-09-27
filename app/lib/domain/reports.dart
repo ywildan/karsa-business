@@ -27,7 +27,11 @@ class AccountSummary {
 }
 
 class DailyCash {
-  const DailyCash({required this.day, required this.inflow, required this.outflow});
+  const DailyCash({
+    required this.day,
+    required this.inflow,
+    required this.outflow,
+  });
 
   final DateTime day;
   final Money inflow;
@@ -45,9 +49,8 @@ class ProfitAndLoss {
   Money get profit => revenue - expense;
 
   /// Persen, dibulatkan ke terdekat. Nol kalau belum ada penjualan.
-  int get marginPercent => revenue.isZero
-      ? 0
-      : (profit.rupees * 100 / revenue.rupees).round();
+  int get marginPercent =>
+      revenue.isZero ? 0 : (profit.rupees * 100 / revenue.rupees).round();
 }
 
 /// Laporan dihitung dari jurnal, tidak pernah dari angka yang diketik ulang.
@@ -142,8 +145,7 @@ abstract final class Reports {
       }
     }
 
-    final days = <DateTime>{...inflow.keys, ...outflow.keys}.toList()
-      ..sort();
+    final days = <DateTime>{...inflow.keys, ...outflow.keys}.toList()..sort();
     return [
       for (final day in days)
         DailyCash(
