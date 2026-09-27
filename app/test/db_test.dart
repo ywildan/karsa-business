@@ -297,9 +297,11 @@ void main() {
       expect(loaded.single.description, 'Empat porsi');
       expect(loaded.single.partyId, party.id);
       expect(loaded.single.cashAccountCode, AccountCode.kas.code);
+      // Sisinya dibaca urut nomor akun, bukan urut ketikan: yang penting
+      // keempat sisi itu ada dan angkanya tidak berubah.
       expect(
         loaded.single.lines.map((line) => line.toString()).toList(),
-        entry.lines.map((line) => line.toString()).toList(),
+        entry.lines.map((line) => line.toString()).toList()..sort(),
       );
       expect(Reports.trialBalanceBalances(loaded), isTrue);
     });
@@ -465,11 +467,17 @@ void main() {
       expect(await book.ledger.entries(businessId: book.businessId), isEmpty);
 
       final delta = await book.outbox.next();
-      expect(delta, hasLength(3));
-      expect(delta.every((row) => row.isTombstone), isTrue);
+      final graves = delta.where((row) => row.isTombstone).toList();
+      expect(graves, hasLength(3));
       expect(
-        delta.map((row) => row.table).toSet(),
+        graves.map((row) => row.table).toSet(),
         {DbSchema.tableEntry, DbSchema.tableLine},
+      );
+      // Usaha kepala jurnal itu ikut naik walau tidak berubah, supaya server
+      // punya tempat untuk menautkan barisnya.
+      expect(
+        delta.firstWhere((row) => row.carried).table,
+        DbSchema.tableBusiness,
       );
     });
   });
@@ -608,9 +616,11 @@ void main() {
       );
       await book.master.deleteParty(doddy.id);
       final delta = await book.outbox.next();
-      expect(delta, hasLength(1));
-      expect(delta.single.table, DbSchema.tableParty);
-      expect(delta.single.isTombstone, isTrue);
+      final graves =
+          delta.where((row) => row.table == DbSchema.tableParty).toList();
+      expect(graves, hasLength(1));
+      expect(graves.single.id, doddy.id);
+      expect(graves.single.isTombstone, isTrue);
 
       await markPushed(book.db, DbSchema.tableParty, doddy.id);
       expect(await book.outbox.pendingCount(), 0);
