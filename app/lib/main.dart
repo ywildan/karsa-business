@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(const KarsaBusinessApp());
+import 'app.dart';
+import 'state/app_controller.dart';
 
-class KarsaBusinessApp extends StatelessWidget {
-  const KarsaBusinessApp({super.key});
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Karsa Business',
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'Karsa Business',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ),
-      ),
-    );
+  AppController? controller;
+  String? bootFailure;
+  try {
+    controller = await AppController.launch();
+  } on Object catch (error) {
+    bootFailure = '$error';
   }
+
+  runApp(KarsaBusinessApp(controller: controller, bootFailure: bootFailure));
 }

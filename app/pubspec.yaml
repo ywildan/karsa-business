@@ -14,10 +14,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Menghasilkan nomor akun semaian yang sama di perangkat mana pun.
   crypto: 3.0.7
+  # Grafik arus kas digambar dengan CustomPaint di atas paket ini: murni Dart,
+  # jadi tidak menambah NDK atau CMake ke dalam pipeline yang tidak punya
+  # Android SDK di mesin pengembang.
   fl_chart: 1.2.0
-  http: 1.6.0
-  intl: 0.20.3
   path: 1.9.1
   # Basis data relasional, bukan dokumen json: jurnal banyak baris dan neraca
   # saldo butuh join. Paketnya murni di atas sqlite3 bawaan Android, jadi tidak

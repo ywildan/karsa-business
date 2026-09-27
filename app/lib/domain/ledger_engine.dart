@@ -85,7 +85,7 @@ abstract final class LedgerEngine {
 
     final cash = request.cashAccountCode ?? AccountCode.kas.code;
     final kind = request.kind;
-    if (_usesParty(kind)) {
+    if (usesParty(kind)) {
       _requireParty(request.partyId);
     }
 
@@ -137,11 +137,29 @@ abstract final class LedgerEngine {
 
   /// Jenis yang menyebut siapa lawannya, karena piutang dan hutang tidak bisa
   /// dibaca tanpa itu.
-  static bool _usesParty(EntryKind kind) =>
+  static bool usesParty(EntryKind kind) =>
       kind == EntryKind.penjualanKredit ||
       kind == EntryKind.penerimaanPiutang ||
       kind == EntryKind.pembelianKredit ||
       kind == EntryKind.pembayaranHutang;
+
+  /// Jenis yang mengubah saldo uang hari ini. Penjualan dan pembelian kredit
+  /// belum menyentuh kas, jadi layar tidak boleh menanyakan sumber uangnya.
+  static bool touchesCash(EntryKind kind) => switch (kind) {
+    EntryKind.penjualanKredit || EntryKind.pembelianKredit => false,
+    _ => true,
+  };
+
+  /// Pos yang harus dipilih lebih dulu supaya sisi non-kas punya tempat jatuh.
+  static AccountType? targetOf(EntryKind kind) => switch (kind) {
+    EntryKind.pemasukan => AccountType.revenue,
+    EntryKind.pengeluaran => AccountType.expense,
+    _ => null,
+  };
+
+  /// Penjualan boleh menyebut modal barangnya; selain itu tidak ada artinya.
+  static bool hasCost(EntryKind kind) =>
+      kind == EntryKind.penjualanTunai || kind == EntryKind.penjualanKredit;
 
   static String _revenueTarget(PostRequest request) => _requireType(
     request.targetAccountCode,
