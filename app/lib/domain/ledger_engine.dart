@@ -91,47 +91,47 @@ abstract final class LedgerEngine {
 
     return switch (kind) {
       EntryKind.modalAwal => [
-          _debit(cash, amount),
-          _credit(AccountCode.modal.code, amount),
-        ],
+        _debit(cash, amount),
+        _credit(AccountCode.modal.code, amount),
+      ],
       EntryKind.pemasukan => [
-          _debit(cash, amount),
-          _credit(_revenueTarget(request), amount),
-        ],
+        _debit(cash, amount),
+        _credit(_revenueTarget(request), amount),
+      ],
       EntryKind.pengeluaran => [
-          _debit(_expenseTarget(request), amount),
-          _credit(cash, amount),
-        ],
+        _debit(_expenseTarget(request), amount),
+        _credit(cash, amount),
+      ],
       EntryKind.penjualanTunai => [
-          _debit(cash, amount),
-          _credit(AccountCode.penjualan.code, amount),
-          ..._costLines(request),
-        ],
+        _debit(cash, amount),
+        _credit(AccountCode.penjualan.code, amount),
+        ..._costLines(request),
+      ],
       EntryKind.penjualanKredit => [
-          _debit(AccountCode.piutang.code, amount),
-          _credit(AccountCode.penjualan.code, amount),
-          ..._costLines(request),
-        ],
+        _debit(AccountCode.piutang.code, amount),
+        _credit(AccountCode.penjualan.code, amount),
+        ..._costLines(request),
+      ],
       EntryKind.penerimaanPiutang => [
-          _debit(cash, amount),
-          _credit(AccountCode.piutang.code, amount),
-        ],
+        _debit(cash, amount),
+        _credit(AccountCode.piutang.code, amount),
+      ],
       EntryKind.pembelianTunai => [
-          _debit(AccountCode.persediaan.code, amount),
-          _credit(cash, amount),
-        ],
+        _debit(AccountCode.persediaan.code, amount),
+        _credit(cash, amount),
+      ],
       EntryKind.pembelianKredit => [
-          _debit(AccountCode.persediaan.code, amount),
-          _credit(AccountCode.hutang.code, amount),
-        ],
+        _debit(AccountCode.persediaan.code, amount),
+        _credit(AccountCode.hutang.code, amount),
+      ],
       EntryKind.pembayaranHutang => [
-          _debit(AccountCode.hutang.code, amount),
-          _credit(cash, amount),
-        ],
+        _debit(AccountCode.hutang.code, amount),
+        _credit(cash, amount),
+      ],
       EntryKind.prive => [
-          _debit(AccountCode.prive.code, amount),
-          _credit(cash, amount),
-        ],
+        _debit(AccountCode.prive.code, amount),
+        _credit(cash, amount),
+      ],
     };
   }
 

@@ -114,11 +114,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if diff -rq "app/lib" "$BUILD_DIR/lib" > /dev/null 2>&1; then
-            echo "Committed source matches the CI formatter."
-          else
-            echo "::notice::Committed source differs from the CI-formatted copy. Apply the diff below."
-            diff -ru "app/lib" "$BUILD_DIR/lib" | head -n 80 || true
+          drift=0
+          for pair in "app/lib $BUILD_DIR/lib" "app/test $BUILD_DIR/test"; do
+            set -- $pair
+            if diff -rq "$1" "$2" > /dev/null 2>&1; then
+              echo "$1 matches the CI formatter."
+            else
+              drift=1
+              diff -ru "$1" "$2" || true
+            fi
+          done
+          if [ "$drift" = 1 ]; then
+            echo "::notice::Committed source differs from the CI-formatted copy. Apply the diff above."
           fi
 
       - name: Guard tracked source against secrets

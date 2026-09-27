@@ -34,7 +34,8 @@ class Money implements Comparable<Money> {
   int get hashCode => rupees.hashCode;
 
   @override
-  String toString() => isNegative ? '-Rp ${group(rupees.abs())}' : 'Rp ${group(rupees)}';
+  String toString() =>
+      isNegative ? '-Rp ${group(rupees.abs())}' : 'Rp ${group(rupees)}';
 
   /// `25000` menjadi `25.000`, tanpa tanda minus.
   static String group(int value) {
