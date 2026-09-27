@@ -126,10 +126,7 @@ class _HubTile extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: Text(
-          detail,
-          style: theme.textTheme.labelMedium,
-        ),
+        trailing: Text(detail, style: theme.textTheme.labelMedium),
       ),
     );
   }

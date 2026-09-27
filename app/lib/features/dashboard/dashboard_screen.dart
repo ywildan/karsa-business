@@ -27,9 +27,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _month = startOfMonth(DateTime.now());
 
-  void _shift(int direction) => setState(
-    () => _month = DateTime(_month.year, _month.month + direction),
-  );
+  void _shift(int direction) =>
+      setState(() => _month = DateTime(_month.year, _month.month + direction));
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +85,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.only(top: 40),
                 child: EmptyState(
                   title: 'Belum ada satu catatan pun',
-                  body: 'Mulai dari modal awal atau penjualan pertama. '
+                  body:
+                      'Mulai dari modal awal atau penjualan pertama. '
                       'Sisanya mengikuti.',
                   action: FilledButton(
                     onPressed: () => openEntryForm(context, controller),
@@ -140,7 +140,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SectionTitle('Pos keluar terbesar'),
                 for (final row in topExpenses)
                   _SummaryLine(
-                    label: controller.accountByCode(row.accountCode)?.name ??
+                    label:
+                        controller.accountByCode(row.accountCode)?.name ??
                         row.accountCode,
                     value: row.balance,
                     loss: true,
@@ -224,9 +225,7 @@ class _SummaryLine extends StatelessWidget {
             value.toString(),
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
-              color: loss
-                  ? KarsaPalette.loss(theme.brightness)
-                  : null,
+              color: loss ? KarsaPalette.loss(theme.brightness) : null,
             ),
           ),
         ],
@@ -354,9 +353,8 @@ class _Legend extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],
     );

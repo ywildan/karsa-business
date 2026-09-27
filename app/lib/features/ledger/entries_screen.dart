@@ -34,7 +34,8 @@ class EntriesScreen extends StatelessWidget {
       body: days.isEmpty
           ? const EmptyState(
               title: 'Daftar ini masih kosong',
-              body: 'Setiap catatan yang kamu tulis muncul di sini, '
+              body:
+                  'Setiap catatan yang kamu tulis muncul di sini, '
                   'dan setiap angkanya bisa dibongkar lagi.',
             )
           : ListView.builder(
@@ -52,9 +53,7 @@ class EntriesScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               _dayHeading(group.day),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
+                              style: Theme.of(context).textTheme.labelLarge
                                   ?.copyWith(
                                     color: KarsaPalette.accent(
                                       Theme.of(context).brightness,
@@ -65,9 +64,7 @@ class EntriesScreen extends StatelessWidget {
                           ),
                           Text(
                             group.net.toString(),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
+                            style: Theme.of(context).textTheme.labelMedium
                                 ?.copyWith(
                                   color: group.net.isNegative
                                       ? KarsaPalette.loss(
@@ -86,7 +83,8 @@ class EntriesScreen extends StatelessWidget {
                       _EntryTile(
                         controller: controller,
                         entry: entry,
-                        onTap: () => openEntryDetail(context, controller, entry),
+                        onTap: () =>
+                            openEntryDetail(context, controller, entry),
                       ),
                   ],
                 );
@@ -132,9 +130,7 @@ List<_DayGroup> _groupByDay(List<LedgerEntry> entries) {
     ordered.putIfAbsent(day, () => <LedgerEntry>[]).add(entry);
   }
   final days = ordered.keys.toList()..sort((a, b) => b.compareTo(a));
-  return [
-    for (final day in days) _DayGroup(day: day, entries: ordered[day]!),
-  ];
+  return [for (final day in days) _DayGroup(day: day, entries: ordered[day]!)];
 }
 
 class _EntryTile extends StatelessWidget {
@@ -276,7 +272,8 @@ Future<void> openEntryDetail(
                     final sure = await confirmDestructive(
                       sheetContext,
                       title: 'Hapus catatan ini?',
-                      message: 'Angkanya hilang dari laporan. Kalau salah '
+                      message:
+                          'Angkanya hilang dari laporan. Kalau salah '
                           'hapus, kamu harus mengetiknya ulang.',
                     );
                     if (!sure) return;

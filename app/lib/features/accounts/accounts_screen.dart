@@ -46,7 +46,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final sure = await confirmDestructive(
       context,
       title: 'Hapus ${account.code}?',
-      message: 'Catatan yang sudah memakai nomor ini tetap terbaca. '
+      message:
+          'Catatan yang sudah memakai nomor ini tetap terbaca. '
           'Nomor yang sama bisa dipakai lagi untuk pos baru.',
     );
     if (!sure) return;
@@ -219,9 +220,8 @@ class _AccountSheetState extends State<_AccountSheet> {
         children: [
           Text(
             'Sub-akan baru',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(

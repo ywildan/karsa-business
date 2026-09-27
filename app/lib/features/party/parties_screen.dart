@@ -33,10 +33,8 @@ class _PartiesScreenState extends State<PartiesScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (sheetContext) => _PartySheet(
-        controller: widget.controller,
-        existing: existing,
-      ),
+      builder: (sheetContext) =>
+          _PartySheet(controller: widget.controller, existing: existing),
     );
   }
 
@@ -44,7 +42,8 @@ class _PartiesScreenState extends State<PartiesScreen> {
     final sure = await confirmDestructive(
       context,
       title: 'Hapus ${party.name}?',
-      message: 'Catatan yang memakai nama ini tetap terbaca; hanya namanya '
+      message:
+          'Catatan yang memakai nama ini tetap terbaca; hanya namanya '
           'yang hilang dari daftar.',
     );
     if (!sure) return;
@@ -89,7 +88,8 @@ class _PartiesScreenState extends State<PartiesScreen> {
                   title: widget.controller.parties.isEmpty
                       ? 'Belum ada pihak'
                       : 'Tidak ada yang cocok',
-                  body: 'Pihak dipakai oleh penjualan kredit, penerimaan '
+                  body:
+                      'Pihak dipakai oleh penjualan kredit, penerimaan '
                       'piutang, pembelian kredit dan pembayaran hutang.',
                   action: widget.controller.parties.isEmpty
                       ? FilledButton(
@@ -107,13 +107,9 @@ class _PartiesScreenState extends State<PartiesScreen> {
                   itemBuilder: (context, index) {
                     final party = parties[index];
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       title: Text(party.name),
-                      subtitle: party.phone == null
-                          ? null
-                          : Text(party.phone!),
+                      subtitle: party.phone == null ? null : Text(party.phone!),
                       trailing: IconButton(
                         onPressed: () => _remove(party),
                         icon: const Icon(Icons.delete_outline_rounded),
@@ -142,10 +138,12 @@ class _PartySheet extends StatefulWidget {
 }
 
 class _PartySheetState extends State<_PartySheet> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.existing?.name ?? '');
-  late final TextEditingController _phone =
-      TextEditingController(text: widget.existing?.phone ?? '');
+  late final TextEditingController _name = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late final TextEditingController _phone = TextEditingController(
+    text: widget.existing?.phone ?? '',
+  );
 
   @override
   void dispose() {
@@ -179,9 +177,8 @@ class _PartySheetState extends State<_PartySheet> {
         children: [
           Text(
             widget.existing == null ? 'Pihak baru' : widget.existing!.name,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
           LabeledField(label: 'Nama', controller: _name, hint: 'Rina'),

@@ -39,9 +39,8 @@ Future<String?> pickOption(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
               child: Text(
                 title.toUpperCase(),
-                style: Theme.of(
-                  sheetContext,
-                ).textTheme.labelMedium?.copyWith(letterSpacing: 0.8),
+                style: Theme.of(sheetContext).textTheme.labelMedium
+                    ?.copyWith(letterSpacing: 0.8),
               ),
             ),
             const Divider(height: 1),

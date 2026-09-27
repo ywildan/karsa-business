@@ -62,7 +62,8 @@ class _BusinessItemsScreenState extends State<BusinessItemsScreen> {
       body: items.isEmpty
           ? EmptyState(
               title: 'Belum ada barang',
-              body: 'Tidak wajib diisi. Catatan tetap berjalan tanpa daftar '
+              body:
+                  'Tidak wajib diisi. Catatan tetap berjalan tanpa daftar '
                   'ini.',
               action: FilledButton(
                 onPressed: () => _edit(),
@@ -106,10 +107,12 @@ class _ItemSheet extends StatefulWidget {
 }
 
 class _ItemSheetState extends State<_ItemSheet> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.existing?.name ?? '');
-  late final TextEditingController _unit =
-      TextEditingController(text: widget.existing?.unit ?? 'pcs');
+  late final TextEditingController _name = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late final TextEditingController _unit = TextEditingController(
+    text: widget.existing?.unit ?? 'pcs',
+  );
   late final TextEditingController _sale = TextEditingController(
     text: widget.existing == null
         ? ''
@@ -157,12 +160,15 @@ class _ItemSheetState extends State<_ItemSheet> {
         children: [
           Text(
             widget.existing == null ? 'Barang baru' : widget.existing!.name,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
-          LabeledField(label: 'Nama', controller: _name, hint: 'Kopi susu 250ml'),
+          LabeledField(
+            label: 'Nama',
+            controller: _name,
+            hint: 'Kopi susu 250ml',
+          ),
           LabeledField(label: 'Satuan', controller: _unit, hint: 'pcs'),
           LabeledField(
             label: 'Harga jual',

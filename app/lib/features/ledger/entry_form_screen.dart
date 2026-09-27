@@ -9,15 +9,13 @@ import '../../state/app_controller.dart';
 import '../common/bits.dart';
 import '../common/pickers.dart';
 
-Future<void> openEntryForm(
-  BuildContext context,
-  AppController controller,
-) => Navigator.push<void>(
-  context,
-  MaterialPageRoute(
-    builder: (context) => EntryFormScreen(controller: controller),
-  ),
-);
+Future<void> openEntryForm(BuildContext context, AppController controller) =>
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EntryFormScreen(controller: controller),
+      ),
+    );
 
 /// Layar catat: sepuluh pilihan dengan bahasa pengguna, satu nominal.
 ///
@@ -192,7 +190,8 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
             const SectionTitle('Masuk ke pos mana?'),
             if (targetOptions.isEmpty)
               _Missing(
-                text: 'Belum ada akun ${targetType.label}. Tambahkan dulu di '
+                text:
+                    'Belum ada akun ${targetType.label}. Tambahkan dulu di '
                     'Usaha › Akun.',
               )
             else
@@ -213,8 +212,7 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
               PickRow(
                 label: 'Pihak',
                 placeholder: _noParty,
-                value:
-                    widget.controller.party(_partyId)?.name ?? _noParty,
+                value: widget.controller.party(_partyId)?.name ?? _noParty,
                 onTap: _pickParty,
               ),
           ],

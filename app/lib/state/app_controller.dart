@@ -27,12 +27,18 @@ class AppController extends ChangeNotifier {
   final Database _db;
   final String deviceId;
 
-  late final LedgerRepository _ledger =
-      LedgerRepository(_db, deviceId: deviceId);
-  late final MasterRepository _master =
-      MasterRepository(_db, deviceId: deviceId);
-  late final BusinessRepository _businesses =
-      BusinessRepository(_db, deviceId: deviceId);
+  late final LedgerRepository _ledger = LedgerRepository(
+    _db,
+    deviceId: deviceId,
+  );
+  late final MasterRepository _master = MasterRepository(
+    _db,
+    deviceId: deviceId,
+  );
+  late final BusinessRepository _businesses = BusinessRepository(
+    _db,
+    deviceId: deviceId,
+  );
 
   late final Outbox outbox = Outbox(_db);
 

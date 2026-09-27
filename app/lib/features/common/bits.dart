@@ -24,12 +24,7 @@ class SectionTitle extends StatelessWidget {
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    super.key,
-    required this.title,
-    this.body,
-    this.action,
-  });
+  const EmptyState({super.key, required this.title, this.body, this.action});
 
   final String title;
   final String? body;
@@ -183,7 +178,9 @@ class PickRow extends StatelessWidget {
                     Text(
                       value,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: chosen ? null : theme.colorScheme.onSurfaceVariant,
+                        color: chosen
+                            ? null
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
