@@ -1367,7 +1367,7 @@
               <div class="node">
                 <div class="node-head">
                   <span class="node-name">kb-validate.yml</span>
-                  <span class="node-cost">≤ 4 menit</span>
+                  <span class="node-cost">± 1 menit, terukur</span>
                 </div>
                 <div class="node-body">
                   <ol class="steps">
@@ -1390,7 +1390,7 @@
               <div class="node">
                 <div class="node-head">
                   <span class="node-name">kb-build.yml</span>
-                  <span class="node-cost">10–16 menit</span>
+                  <span class="node-cost">4½–8 menit, terukur</span>
                 </div>
                 <div class="node-body">
                   <ol class="steps">
@@ -1532,8 +1532,11 @@
           <tr>
             <td>GitHub Actions</td>
             <td class="mono sub">ubuntu-latest</td>
-            <td>2.000 menit / bulan dan 512 MB cache. Build Android 10–16 menit → ± 70 build. Sumber daya termahal di proyek ini.</td>
-            <td class="mono c">☐</td>
+            <td>2.000 menit / bulan dan 512 MB cache. Terukur 27 Sep 2026: job validate
+              ± 1 menit, build APK 4½–8 menit. Plafon itu cukup untuk ± 250–440 build —
+              jauh lebih longgar daripada perkiraan awal, tapi tetap sumber daya termahal
+              di proyek ini.</td>
+            <td class="mono c">☑</td>
           </tr>
           <tr>
             <td>Neon Postgres</td>
@@ -1605,7 +1608,7 @@
           </div>
           <div class="node-body">
             <p class="sub" style="font-size: 12px; line-height: 1.6">
-              Pekerjaan logika di job 4 menit, build Android hanya dari <span class="mono">main</span>,
+              Pekerjaan logika di job satu menit, build Android hanya dari <span class="mono">main</span>,
               dan <span class="mono">cancel-in-progress</span> pada semua job yang bisa dibatalkan.
               Satu APK, bukan matriks dua edisi.
             </p>
@@ -1689,10 +1692,10 @@
             <tr>
               <td>
                 <span class="badge">Proses</span><br />
-                Tidak ada <span class="mono">flutter run</span> dan tidak ada <span class="mono">adb</span>: kesalahan UI baru terlihat setelah build 15 menit.
+                Tidak ada <span class="mono">flutter run</span> dan tidak ada <span class="mono">adb</span>: kesalahan UI baru terlihat setelah build lima menit.
               </td>
               <td>Iterasi UI lambat, godaan untuk mengirim tanpa menguji.</td>
-              <td>Logika dipindah ke domain murni Dart yang teruji di job 4 menit. Verifikasi fungsi dilakukan manusia, di HP, di blok "Verifikasi".</td>
+              <td>Logika dipindah ke domain murni Dart yang teruji di job satu menit. Verifikasi fungsi dilakukan manusia, di HP, di blok "Verifikasi".</td>
             </tr>
             <tr>
               <td>
@@ -1737,15 +1740,15 @@
 
           <div class="l-n">C1</div>
           <div class="l-cmd">Domain murni Dart + job validate<span>Uang, bagan akun, mesin jurnal, dan ujinya. Membuktikan toolchain + overlay + analyzer + test hijau.</span></div>
-          <div class="l-t">≤ 4 menit</div>
+          <div class="l-t">± 1 menit</div>
 
           <div class="l-n">C2</div>
           <div class="l-cmd">Lapisan SQLite + laporan<span>Skema, repositori, outbox <span class="mono">dirty</span>, dan uji basis data yang berjalan di VM tanpa emulator.</span></div>
-          <div class="l-t">≤ 5 menit</div>
+          <div class="l-t">± 1 menit</div>
 
           <div class="l-n">C3</div>
           <div class="l-cmd">Antarmuka v1 + APK pertama<span>Tema, navigasi, form transaksi, dashboard bulanan. Build Android pertama yang benar-benar terpasang di HP.</span></div>
-          <div class="l-t">10–16 menit</div>
+          <div class="l-t">4½–8 menit</div>
 
           <div class="l-n">C4</div>
           <div class="l-cmd">Penandaan rilis + GitHub Release<span>Empat secret signing diisi, APK release-signed terbit sebagai rilis. <b>Versi 1 gratis dinyatakan jadi.</b></span></div>
