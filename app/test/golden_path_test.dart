@@ -164,19 +164,23 @@ void expectSummary(WidgetTester tester, String label, String value) {
   );
 }
 
-/// Baris yang belum cukup dekat dengan layar tidak dibangun sama sekali:
-/// ListView menata isinya dengan malas, persis seperti di hp. [delta] negatif
-/// menurunkan daftar, positif mengembalikannya ke atas. Cariannya dikunci ke
-/// dalam ringkasan saja, karena tab catatan juga menyebut angka yang sama.
+/// Baris paling bawah ringkasan tidak ikut terbangun sebelum ia cukup dekat
+/// dengan layar: ListView menata isinya dengan malas, persis seperti di hp.
+/// Jadi daftar diturunkan sampai habis, dibaca, lalu dinaiki lagi.
+///
+/// Yang digeser adalah posisi gulungnya, bukan jarinya: di tengah layar ada
+/// grafik yang menahan sentuhan dan tidak menyerahkannya ke daftar.
 Future<void> scrollRingkas(
-  WidgetTester tester,
-  String text, {
-  required double delta,
+  WidgetTester tester, {
+  required bool toBottom,
 }) async {
-  final ringkas = find.byType(DashboardScreen);
-  final target = find.descendant(of: ringkas, matching: find.text(text));
-  final list = find.descendant(of: ringkas, matching: find.byType(Scrollable));
-  await tester.scrollUntilVisible(target, delta, scrollable: list);
+  final list = find.descendant(
+    of: find.byType(DashboardScreen),
+    matching: find.byType(Scrollable),
+  );
+  expect(list, findsOneWidget, reason: 'ringkasan harus punya satu daftar');
+  final position = tester.state<ScrollableState>(list).position;
+  position.jumpTo(toBottom ? position.maxScrollExtent : 0.0);
   await tester.pumpAndSettle();
 }
 
@@ -231,11 +235,11 @@ void main() {
     expectCard(tester, 'Saldo kas', 'Rp 320.000');
     expect(find.text('margin 40%'), findsOneWidget);
     expect(find.text('Harga Pokok Penjualan'), findsOneWidget);
-    await scrollRingkas(tester, 'Nilai stok di rak', delta: -160.0);
+    await scrollRingkas(tester, toBottom: true);
     expectSummary(tester, 'Nilai stok di rak', '-Rp 10.000');
     // Kembali ke atas: kartu saldo kas masih dibutuhkan oleh perbandingan di
     // bawah, dan ia tidak ikut terbangun lagi kalau daftar ditinggal di tengah.
-    await scrollRingkas(tester, 'Rp 320.000', delta: 160.0);
+    await scrollRingkas(tester, toBottom: false);
 
     await openTab(tester, 'Catatan');
     expect(find.text('Hari ini'), findsOneWidget);
@@ -262,7 +266,9 @@ void main() {
     await tester.enterText(field('Rina'), 'Rina');
     await touchAndSave(tester, find.widgetWithText(FilledButton, 'Simpan'));
     expect(find.text('Rina'), findsOneWidget);
-    await tester.pageBack();
+    // Daftar pihak adalah layar yang didorong, bukan tab: keluar darinya lewat
+    // gestur back tidak dijamin ada di tes, jadi route-nya ditutup langsung.
+    await tester.pageBack(usePredictiveBack: false);
 
     await touch(tester, find.text('Catat'));
     await pickKind(tester, EntryKind.penjualanKredit);
@@ -290,7 +296,7 @@ void main() {
     // Piutang lahir dari jurnal, bukan dari diketik: kas belum bergerak.
     expectCard(tester, 'Saldo kas', 'Rp 0');
     expectCard(tester, 'Pendapatan', 'Rp 30.000');
-    await scrollRingkas(tester, 'Piutang di tangan pelanggan', delta: -160.0);
+    await scrollRingkas(tester, toBottom: true);
     expectSummary(tester, 'Piutang di tangan pelanggan', 'Rp 30.000');
   });
 
