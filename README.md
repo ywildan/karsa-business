@@ -17,6 +17,10 @@ Yang sudah benar-benar ada dan terbukti di CI:
 
 - Aplikasi Flutter + SQLite: catat modal, penjualan, piutang, pengeluaran; double-entry bekerja di
   mesin dan tidak pernah terlihat di layar; laporan dan dashboard v1 dihitung dari jurnalnya.
+- Alur inti diuji sebagai perjalanan layar yang sebenarnya, bukan hanya fungsi di bawah: membuka
+  usaha, menambah pihak, mencoba mencatat penjualan tanpa pihak (ditolak, alasannya terbaca),
+  lalu mencatatnya dan membandingkan angka ringkasan dengan hitungan manual — piutang naik, kas
+  tidak bergerak.
 - APK-nya dibangun Actions dan bisa dipasang. Sampai keystore release dibuat, tanda tangannya
   masih tanda tangan debug — tidak ada jalur upgrade otomatis, jadi penggantian tanda tangan
   berarti pasang ulang sekali.
