@@ -300,6 +300,9 @@ void main() {
     expect(entryForm, findsNothing);
 
     // Piutang lahir dari jurnal, bukan dari diketik: kas belum bergerak.
+    // Shell masih berhenti di tab Usaha tempat nama dicari tadi, dan tab yang
+    // tidak dipilih tidak terbaca finder, jadi ringkasan dibuka lebih dulu.
+    await openTab(tester, 'Ringkas');
     expectCard(tester, 'Saldo kas', 'Rp 0');
     expectCard(tester, 'Pendapatan', 'Rp 30.000');
     await scrollRingkas(tester, toBottom: true);
