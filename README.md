@@ -11,12 +11,25 @@ _Laporan keuangan warung, reseller, dan jasa kecil — tanpa perlu akuntansi._
 
 ## Status
 
-**Fase C0 — kerangka repo dan rancangan teknis.** Belum ada kode Dart, belum ada workflow, belum
-ada APK. Yang sudah ada hanya dokumen rancangan.
+**C0–C3 selesai. C4 menunggu satu tindakan manusia: keystore release.**
 
-Jangan diklaim sebagai fitur yang berjalan: sinkronisasi cloud, lisensi, dan dashboard web.
-Semuanya dirancang di dokumen tersebut dan baru dikerjakan setelah versi 1 gratis menghasilkan
-APK yang bisa dipasang.
+Yang sudah benar-benar ada dan terbukti di CI:
+
+- Aplikasi Flutter + SQLite: catat modal, penjualan, piutang, pengeluaran; double-entry bekerja di
+  mesin dan tidak pernah terlihat di layar; laporan dan dashboard v1 dihitung dari jurnalnya.
+- APK-nya dibangun Actions dan bisa dipasang. Sampai keystore release dibuat, tanda tangannya
+  masih tanda tangan debug — tidak ada jalur upgrade otomatis, jadi penggantian tanda tangan
+  berarti pasang ulang sekali.
+- Sisi server versi 2 (`api/`): aturan lisensi, delta sync, perapian tombstone dan laporan neraca
+  saldo. 95 tes jalan di Node tanpa satu paket pun terpasang di laptop.
+- Satu workflow `Validate` dengan dua job: Dart/Flutter dan Worker. Analyzer dikeluarkan sebagai
+  anotasi per baris dan berkas workflow ikut diperiksa, jadi kegagalan terbaca tanpa membongkar
+  log mentah.
+
+Yang belum ada, dan jangan dibaca sebagai fitur yang berjalan: deploy Worker dan Neon, dashboard
+web, aktivasi kode lisensi dari HP, dan sinkronisasi nyata antara HP dengan cloud. Logikanya sudah
+ditulis dan sudah diuji melawan model server di dalam tes — yang belum ada hanya sambungannya ke
+dunia, dan itu butuh akun cloud.
 
 ## Kenapa tidak ada `android/`
 
@@ -31,7 +44,7 @@ menginstalnya. GitHub Actions adalah satu-satunya mesin build:
 
 Pola ini sudah terbukti menghasilkan APK bertanda tangan di `ywildan/karsa`.
 
-## Struktur yang direncanakan
+## Struktur
 
 ```text
 Karsa Business/
@@ -42,18 +55,36 @@ Karsa Business/
     android/
       AndroidManifest.xml   satu-satunya berkas native yang dimiliki repo
     lib/
-      domain/               murni Dart, tanpa import flutter — bisa diuji di CI tanpa emulator
-      data/                 SQLite: skema, repositori, outbox delta
-      features/             layar per area: transaksi, laporan, dashboard, pengaturan
+      core/                   uang dan format — tidak tahu apa pun tentang flutter
+      domain/                 murni Dart, tanpa import flutter: jurnal, laporan, aturan sync
+      data/                   SQLite: skema, repositori, outbox, sesi sinkron
+      features/               layar per area: kerangka, panduan awal, jurnal, akun, pihak,
+                              bisnis, dashboard, pengaturan
+      state/ theme/
     test/
   .github/workflows/
     kb-validate.yml         loop dalam, <= 4 menit, tanpa build Android
     kb-build.yml            hanya main: APK release-signed -> GitHub Release
     debug-build.yml         build verbose + log lengkap, dipanggil manual
   migrations/               DDL Neon, diterapkan lewat workflow, tidak otomatis
-  api/                      Cloudflare Workers: lisensi + sync + report
-  web-dashboard/            statis + Chart.js, baca-saja
+  api/                      Cloudflare Workers: lisensi + sync + report, diuji dengan Node saja
+  tool/                     penjaga lokal: impor Dart, kurung seimbang, YAML workflow
 ```
+
+## Verifikasi tanpa memasang apa pun
+
+Semua yang bisa dibuktikan di laptop ini dibuktikan di laptop ini. Tidak ada `node_modules`,
+tidak ada Flutter, tidak ada SDK:
+
+```bash
+cd api && npm test                    # aturan sync + lisensi + SQL, jalan di Node 26 apa adanya
+python3 tool/check_imports.py         # simbol yang dipakai tanpa mengimpor rumahnya
+python3 tool/check_dart.py app        # kurung dan kutip yang tidak seimbang
+python3 tool/check_workflows.py       # plain scalar yang membuat Actions mati tanpa log
+```
+
+Sisanya hanya hidup di CI: `dart analyze`, `flutter test` (termasuk SQLite lewat FFI), format
+Dart, dan seluruh jalur Android.
 
 ## Verifikasi di CI
 
