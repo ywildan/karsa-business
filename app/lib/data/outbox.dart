@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../domain/sync_protocol.dart';
 import 'db.dart';
 
 /// Satu baris yang siap naik ke server.
@@ -33,7 +34,10 @@ class ParentRef {
   final String table;
 }
 
-const Map<String, List<ParentRef>> _parents = {
+/// Induk tiap tabel sinkron. Publik karena kontrak sinkron dan uji drift
+/// membacanya: server memegang foreign key yang sama, jadi kolom-kolom ini
+/// wajib ikut naik.
+const Map<String, List<ParentRef>> syncParents = {
   DbSchema.tableParty: [ParentRef('business_id', DbSchema.tableBusiness)],
   DbSchema.tableItem: [ParentRef('business_id', DbSchema.tableBusiness)],
   DbSchema.tableAccount: [ParentRef('business_id', DbSchema.tableBusiness)],
@@ -65,7 +69,7 @@ class Outbox {
   /// jurnal tidak boleh naik tanpa kepala transaksinya. Induk yang ikut naik
   /// meski tidak berubah hanya membuat server men-stempel ulang barisnya —
   /// aman diulang dan tidak menduplikasi apa pun.
-  Future<List<DeltaRow>> next({int limit = 200}) async {
+  Future<List<DeltaRow>> next({int limit = SyncProtocol.pushBatch}) async {
     final found = <String, DeltaRow>{};
     for (final table in DbSchema.syncableTables) {
       final rows = await db.query(
@@ -88,7 +92,7 @@ class Outbox {
     final queue = batch.values.toList();
     while (queue.isNotEmpty) {
       final row = queue.removeLast();
-      for (final ref in _parents[row.table] ?? const <ParentRef>[]) {
+      for (final ref in syncParents[row.table] ?? const <ParentRef>[]) {
         final parentId = row.values[ref.column] as String?;
         if (parentId == null) continue;
         final key = '${ref.table}:$parentId';
