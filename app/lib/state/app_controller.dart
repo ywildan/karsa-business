@@ -133,8 +133,11 @@ class AppController extends ChangeNotifier {
     return Money(total);
   }
 
-  static Future<AppController> launch() async {
-    final db = await KarsaDatabase.open();
+  /// [path] hanya untuk tes: basis data yang sama, lokasinya berbeda. Semua
+  /// hal lain — skema, identitas perangkat, isi tab — tetap milik
+  /// [KarsaDatabase], jadi layar diuji apa adanya.
+  static Future<AppController> launch({String? path}) async {
+    final db = await KarsaDatabase.open(path: path);
     final deviceId = await KarsaDatabase.ensureDeviceId(db);
     final controller = AppController._(db, deviceId);
     await controller.reload();
