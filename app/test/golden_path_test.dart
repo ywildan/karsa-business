@@ -70,14 +70,19 @@ Future<void> flush(WidgetTester tester) async {
 
 /// Sentuhan yang jujur: target ditarik ke layar dulu, karena semua form hidup
 /// di dalam ListView yang bisa menggulir pergi darinya.
+///
+/// Gulirannya bergerak pelan, jadi frame harus dipacu sebelum jari turun:
+/// menyentuh tanpa menunggu hanya akan mengenai koordinat yang lama.
 Future<void> touch(WidgetTester tester, Finder target) async {
   await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
   await tester.tap(target);
   await tester.pumpAndSettle();
 }
 
 Future<void> touchAndSave(WidgetTester tester, Finder target) async {
   await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
   await tester.tap(target);
   await flush(tester);
   await tester.pumpAndSettle();
@@ -96,11 +101,13 @@ Future<void> startBusiness(WidgetTester tester, String name) async {
   await touchAndSave(tester, find.text('Mulai mencatat'));
 }
 
-/// Chip yang belum kebagian tempat harus ditarik masuk dulu sebelum disentuh.
+/// Baris chip hanya memuat tiga jenis sekaligus dan sisanya belum dibangun sama
+/// sekali, jadi ia ditarik sampai yang dicari muncul; sesudah itu [touch] yang
+/// menempatkannya di tempat yang bisa disentuh.
 Future<void> pickKind(WidgetTester tester, EntryKind kind) async {
   final chip = find.widgetWithText(ChoiceChip, kind.label);
-  for (var i = 0; i < 6 && chip.evaluate().isEmpty; i++) {
-    await tester.drag(kindRow, const Offset(-72, 0));
+  for (var i = 0; i < 10 && chip.evaluate().isEmpty; i++) {
+    await tester.drag(kindRow, const Offset(-120, 0));
     await tester.pumpAndSettle();
   }
   await touch(tester, chip);
@@ -164,8 +171,11 @@ void main() {
 
   // Membuka basis data adalah kerja nyata, jadi ia terjadi di luar zona waktu
   // palsu tes widget; hanya ketikan dan sentuhan yang hidup di dalam zona itu.
+  // Buku ditutup lagi sebab sqflite mengenalinya dari lokasinya: tanpa ditutup,
+  // kasus berikutnya mewarisi catatan kasus sebelumnya.
   setUp(() async {
     book = await openBook();
+    addTearDown(book.close);
   });
 
   testWidgets('dari nama usaha sampai angka di ringkasan', (tester) async {

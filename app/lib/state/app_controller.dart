@@ -144,6 +144,11 @@ class AppController extends ChangeNotifier {
     return controller;
   }
 
+  /// sqflite mengenali sebuah buku dari lokasinya: buku yang dibuka lagi tanpa
+  /// ditutup akan memberi isi yang lama, jadi tes yang menuntut buku kosong
+  /// wajib menutup lebih dulu.
+  Future<void> close() => _db.close();
+
   Future<void> reload() async {
     try {
       final business = await _businesses.current();
