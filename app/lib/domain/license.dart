@@ -7,10 +7,7 @@
 library;
 
 /// Edisi yang diketahui sebuah perangkat, hasil verifikasi.
-enum Edition {
-  free,
-  pro,
-}
+enum Edition { free, pro }
 
 /// Isi balasan `POST /license/verify`, dipakai bersama cap waktu lokal.
 class LicenseTicket {
@@ -122,10 +119,6 @@ abstract final class LicenseGate {
     required int seenMicros,
     required int nowMicros,
   }) =>
-      stateOf(
-        ticket: ticket,
-        seenMicros: seenMicros,
-        nowMicros: nowMicros,
-      ) !=
+      stateOf(ticket: ticket, seenMicros: seenMicros, nowMicros: nowMicros) !=
       LicenseState.locked;
 }
