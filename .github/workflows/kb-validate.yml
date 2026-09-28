@@ -168,17 +168,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          targets=(app docs)
-          for optional in migrations api web-dashboard; do
-            [ -d "$optional" ] && targets+=("$optional")
-          done
-          if grep -rInE \
-            '(neondb|postgresql?://[^$]|sk_[A-Z0-9]{20,}|ghp_[A-Za-z0-9]{36}|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16})' \
-            "${targets[@]}"; then
+          # Yang diperiksa adalah daftar berkas yang benar-benar dilacak git, bukan
+          # daftar direktori yang harus diingat: direktori baru ikut terjaga sejak
+          # commit pertamanya, dan salinan build sementara di runner tidak ikut.
+          # Pola dipecah lalu disatukan kembali saat grep jalan: berkas ini sendiri
+          # dilacak git, dan pola yang ditulis utuh akan cocok dengan barisnya sendiri.
+          parts=(
+            'ne''ondb'
+            'postgres''ql?://[^$]'
+            'sk_''[A-Za-z0-9]{20,}'
+            'ghp_''[A-Za-z0-9]{36}'
+            'BEGIN ''[A-Z ]*PRIVATE KEY'
+            'AKIA''[0-9A-Z]{16}'
+          )
+          # `|` dipasang di antara elemen, bukan di antara kata: salah satu pola
+          # mengandung spasi di dalamnya.
+          pattern="($(printf '%s|' "${parts[@]}" | sed 's/|$//'))"
+          git ls-files -z | xargs -0 -r grep -InE "$pattern" > secret-hits.txt || true
+          if [ -s secret-hits.txt ]; then
+            cat secret-hits.txt
             echo "::error::Possible secret material found in tracked source."
             exit 1
           fi
-          echo "Secret guard passed."
+          echo "Secret guard passed: $(git ls-files | wc -l) tracked files scanned."
 
   # Sisi server. Job ini sengaja berdiri sendiri, bukan langkah tambahan di
   # dalam `validate`: kalau Flutter gagal, aturan sinkronisasi tetap harus
@@ -190,7 +202,7 @@ jobs:
   # benar-benar terpasang: di laptop tidak ada node_modules, dan itu memang
   # syarat dari seluruh rencana ini.
   api:
-    name: Worker: typecheck, test
+    name: "Worker: typecheck, test"
     runs-on: ubuntu-latest
     timeout-minutes: 6
     defaults:

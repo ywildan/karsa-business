@@ -1216,7 +1216,7 @@
           <div class="l-t">Workers → Neon</div>
 
           <div class="l-n">4</div>
-          <div class="l-cmd">Upsert idempoten<span><span class="mono">ON CONFLICT (id) DO UPDATE</span> lalu server men-stempel ulang <span class="mono">updated_at</span> dan mengambil <span class="mono">nextval(rev)</span>.</span></div>
+          <div class="l-cmd">Upsert idempoten<span><span class="mono">ON CONFLICT (owner_id, id) DO UPDATE</span> lalu server men-stempel ulang <span class="mono">updated_at</span> dan mengambil <span class="mono">nextval(rev)</span>.</span></div>
           <div class="l-t">kirim ulang = aman</div>
 
           <div class="l-n">5</div>
@@ -1236,7 +1236,8 @@
                 <li>Jam perangkat tidak pernah menentukan pemenang — server yang men-stempel saat baris baru tiba.</li>
                 <li>Perangkat yang sama selalu boleh menimpa barisnya sendiri.</li>
                 <li>Urutan tiba = urutan menang. Satu orang mengedit baris yang sama di dua HP jarang terjadi, dan yang terakhir tersimpan yang menang.</li>
-                <li>Menghapus baris fisik tidak pernah disinkronkan; tombstone yang dikirim, lalu dikompaksi setelah 30 hari.</li>
+                <li>Menghapus baris fisik tidak pernah disinkronkan; tombstone yang dikirim, lalu dibersihkan cron harian Workers setelah 30 hari.</li>
+                <li>Sejarah yang dibersihkan itu ada batasnya: <span class="mono">sync_floor</span> mencatat rev tertinggi yang dihapus. Kursor yang tertinggal di bawahnya dijawab <span class="mono">409 resync_required</span> — sesudah push bersih, HP unduh ulang penuh, bukan membuang catatan lokalnya.</li>
               </ul>
             </div>
           </div>
@@ -1382,7 +1383,10 @@
                 </div>
                 <div class="node-foot">
                   <b>Tidak membangun Android.</b> Ini tempat logika dan laporan diiterasi,
-                  dan ini alasan <b>domain/</b> harus murni Dart.
+                  dan ini alasan <b>domain/</b> harus murni Dart. Job keduanya,
+                  <span class="mono">api</span>: Node menjalankan TypeScript apa adanya, jadi
+                  aturan sinkron sisi server terjaga di loop murah yang sama — dan
+                  <span class="mono">npm install</span> hanya pernah terjadi di runner, tidak di laptop.
                 </div>
               </div>
             </div>
