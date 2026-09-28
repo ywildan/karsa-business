@@ -254,7 +254,9 @@ void main() {
     expect(find.text('Modal awal'), findsOneWidget);
     // Ringkasan dan daftar harus menyebut angka yang sama: yang satu saldo kas
     // seluruh bulan, yang satu uang hari ini — dan hari ini memang semuanya.
-    expect(find.text('Rp 320.000'), findsNWidgets(2));
+    // Tab yang sedang tidak dipilih dianggap offstage oleh finder, jadi ia
+    // ikut dihitung; kalau tidak, hanya layar yang tampak yang terhitung.
+    expect(find.text('Rp 320.000', skipOffstage: false), findsNWidgets(2));
 
     await touch(tester, find.text('Jualan, langsung bayar'));
     expect(inSheet('Debit Rp 25.000'), findsOneWidget);
@@ -288,9 +290,15 @@ void main() {
     expect(find.text('Catat dulu ini urusan dengan siapa.'), findsOneWidget);
     expect(entryForm, findsOneWidget);
 
-    // Pesan penolakan bertahan lima detik. Ditunggu sampai benar-benar tutup,
-    // supaya sentuhan berikutnya tidak jatuh ke atasnya.
-    await tester.pump(const Duration(seconds: 6));
+    // Pesan penolakan bertahan lima detik, dan tidak jelas jam mana yang
+    // menghitungnya: tulisan ke basis data selesai di dalam runAsync, jadi
+    // timer penutupnya bisa lahir di waktu nyata. Kedua jam diberi jalan,
+    // dengan ruang untuk satu pesan lagi di antrean, supaya sentuhan
+    // berikutnya tidak jatuh di atas pesan.
+    await tester.pump(const Duration(seconds: 12));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(seconds: 6)),
+    );
     await tester.pumpAndSettle();
     expect(find.byType(SnackBar), findsNothing);
 
