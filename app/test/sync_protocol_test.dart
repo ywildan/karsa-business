@@ -246,7 +246,9 @@ void main() {
         rev: 2,
         values: {'deleted': 1},
       );
-      final phone = _Phone()..pull([masuk])..pull([hapus]);
+      final phone = _Phone()
+        ..pull([masuk])
+        ..pull([hapus]);
       expect(phone.column(DbSchema.tableParty, 'p1', 'deleted'), 1);
     });
 
@@ -378,11 +380,7 @@ void main() {
 
     test('induk yang dibawa outbox dikenal server dan kolomnya ikut naik', () {
       for (final entry in syncParents.entries) {
-        expect(
-          DbSchema.syncableTables,
-          contains(entry.key),
-          reason: entry.key,
-        );
+        expect(DbSchema.syncableTables, contains(entry.key), reason: entry.key);
         for (final ref in entry.value) {
           expect(
             DbSchema.syncableTables,

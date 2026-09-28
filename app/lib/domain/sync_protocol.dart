@@ -125,10 +125,7 @@ abstract final class SyncProtocol {
   /// `dirty` dibuang, kolom yang tidak dikenal tabel dibuang, dan id tidak
   /// pernah diganti: kuncinya dibuat di perangkat justru supaya dua hp yang
   /// offline berbulan-bulan tidak menabrak nomor catatan yang sama.
-  static Map<String, Object?> toWire(
-    String table,
-    Map<String, Object?> local,
-  ) {
+  static Map<String, Object?> toWire(String table, Map<String, Object?> local) {
     final allowed = wireColumns[table];
     if (allowed == null) {
       throw ArgumentError.value(table, 'table', 'tabel ini tidak ikut sinkron');
