@@ -244,6 +244,51 @@ jobs:
           build/app/outputs/flutter-apk/app-release.apk
           --forbid-permission android.permission.INTERNET
 
+      # Kunci yang menandatangani APK adalah satu-satunya kunci yang bisa
+      # memasang pembaruan ke hp orang. Yang dibaca di sini bukan "ada tanda
+      # tangannya", melainkan sidik jari kuncinya, dari berkas jadi, dan
+      # dibandingkan dengan kunci yang didokumentasikan di docs/rilis.md.
+      # Ganti angkanya hanya kalau pergantian kunci memang disengaja.
+      - name: Verify the signing certificate
+        if: steps.signing.outputs.configured == 'true'
+        env:
+          KB_CERT_SHA256: "08:D7:53:97:82:68:0C:9B:0F:BA:A0:DD:62:87:F2:4F:C7:53:59:B0:31:7B:60:64:96:C1:DF:50:3E:4C:2E:33"
+        working-directory: ${{ env.BUILD_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="build/app/outputs/flutter-apk/app-release.apk"
+          signer="$(command -v apksigner || true)"
+          if [[ -z "$signer" ]]; then
+            sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+            signer="$(find "$sdk/build-tools" -name apksigner -type f 2>/dev/null | sort | tail -n 1)"
+          fi
+          if [[ -z "$signer" ]]; then
+            echo "::error::apksigner tidak ditemukan di runner, jadi sidik jari kunci tidak bisa dibaca."
+            exit 1
+          fi
+
+          if ! raw="$("$signer" verify --print-certs "$apk" 2>&1)"; then
+            printf '%s\n' "$raw"
+            echo "::error::APK release ini tidak lolos verifikasi tanda tangan."
+            exit 1
+          fi
+          printf '%s\n' "$raw"
+
+          expected="$(printf '%s' "$KB_CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          digests="$(printf '%s\n' "$raw" \
+            | sed -n 's/.*certificate SHA-256 digest: //p' \
+            | tr -d ':' | tr '[:upper:]' '[:lower:]' | sort -u)"
+          if [[ "$(printf '%s\n' "$digests" | grep -c .)" != "1" ]]; then
+            echo "::error::Lebih dari satu tanda tangan pada APK ini: $digests"
+            exit 1
+          fi
+          if [[ "$digests" != "$expected" ]]; then
+            echo "::error::APK ini ditandatangani $digests, bukan kunci $expected yang didokumentasikan. Ganti ANDROID_KEYSTORE_* hanya dengan keystore Karsa Business."
+            exit 1
+          fi
+          echo "APK ini ditandatangani kunci yang didokumentasikan."
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
