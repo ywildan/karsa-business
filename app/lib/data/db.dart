@@ -217,11 +217,7 @@ abstract final class KarsaDatabase {
     return rows.isEmpty ? null : rows.first['value'] as String;
   }
 
-  static Future<void> putMeta(
-    DatabaseExecutor db,
-    String key,
-    String value,
-  ) =>
+  static Future<void> putMeta(DatabaseExecutor db, String key, String value) =>
       db.insert(DbSchema.tableMeta, {
         'key': key,
         'value': value,

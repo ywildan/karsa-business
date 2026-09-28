@@ -113,8 +113,11 @@ class _Phone {
   final String deviceId;
   final _Bridge bridge;
 
-  late final SyncSession session =
-      SyncSession(db: db, outbox: Outbox(db), transport: bridge);
+  late final SyncSession session = SyncSession(
+    db: db,
+    outbox: Outbox(db),
+    transport: bridge,
+  );
 
   LedgerRepository get ledger => LedgerRepository(db, deviceId: deviceId);
 

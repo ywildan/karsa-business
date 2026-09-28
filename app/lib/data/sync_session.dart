@@ -6,11 +6,7 @@ import 'outbox.dart';
 
 /// Satu baris menuju `POST /sync/push`.
 class PushRow {
-  const PushRow({
-    required this.table,
-    required this.id,
-    required this.values,
-  });
+  const PushRow({required this.table, required this.id, required this.values});
 
   final String table;
   final String id;
