@@ -1,0 +1,23 @@
+{
+  "name": "karsa-business-api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Cloudflare Worker untuk Karsa Business versi 2. Tidak ada dependensi yang dipasang di laptop: Node menjalankan TypeScript apa adanya.",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning --test src/",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test",
+    "deploy": "npx --yes wrangler@4.142.0 deploy"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.3",
+    "typescript": "7.0.2"
+  }
+}

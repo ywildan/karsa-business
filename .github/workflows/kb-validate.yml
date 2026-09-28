@@ -173,9 +173,55 @@ jobs:
             [ -d "$optional" ] && targets+=("$optional")
           done
           if grep -rInE \
-            '(neondb|postgresql?://[^$]|sk_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16})' \
+            '(neondb|postgresql?://[^$]|sk_[A-Z0-9]{20,}|ghp_[A-Za-z0-9]{36}|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16})' \
             "${targets[@]}"; then
             echo "::error::Possible secret material found in tracked source."
             exit 1
           fi
           echo "Secret guard passed."
+
+  # Sisi server. Job ini sengaja berdiri sendiri, bukan langkah tambahan di
+  # dalam `validate`: kalau Flutter gagal, aturan sinkronisasi tetap harus
+  # punya jawaban sendiri — dan sebaliknya. Node 26 menjalankan TypeScript apa
+  # adanya (tanpa transpile, tanpa bundler), jadi `api/src/*_test.ts` di CI
+  # dicek dengan alat yang sama seperti waktu ditulis.
+  #
+  # `npm install` di sini adalah satu-satunya tempat dependensi Worker pernah
+  # benar-benar terpasang: di laptop tidak ada node_modules, dan itu memang
+  # syarat dari seluruh rencana ini.
+  api:
+    name: Worker: typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: api/package.json
+
+      # Versi di package.json ditulis tanpa caret. Tanpa lockfile yang bisa
+      # dihasilkan di laptop, satu-satunya jaminan replikasi adalah pin eksak —
+      # dan langkah ini yang membuktikannya bisa resolve.
+      - name: Install in CI
+        run: npm install --no-audit --no-fund
+
+      - name: Report toolchain
+        run: node --version
+
+      # Yang tidak tercakup `node --test`: hanya `index.ts` yang mengimpor driver
+      # Neon, dan berkas itu tidak pernah dimuat saat tes. Jadi di CI jalur muat
+      # modul luar dibuktikan oleh tipe, bukan oleh eksekusi.
+      - name: Typecheck
+        run: |
+          npx tsc --version
+          npm run typecheck
+
+      - name: Run tests
+        run: npm test
