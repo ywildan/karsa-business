@@ -67,8 +67,10 @@ class BusinessHubScreen extends StatelessWidget {
           _HubTile(
             icon: Icons.settings_outlined,
             title: 'Pengaturan',
-            detail: 'Nama usaha, identitas perangkat',
-            hint: 'Termasuk berapa catatan yang menunggu sinkronisasi.',
+            detail: '${controller.entries.length} catatan',
+            hint:
+                'Nama usaha dan identitas perangkat, termasuk yang menunggu '
+                'sinkronisasi.',
             onTap: () => _open(context, SettingsScreen(controller: controller)),
           ),
         ],
@@ -126,7 +128,19 @@ class _HubTile extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: Text(detail, style: theme.textTheme.labelMedium),
+        // Lebar tetap: ListTile menuntut sisi kanannya jauh lebih sempit dari
+        // seluruh baris, dan sebuah angka yang tumbuh ("128 catatan") tidak
+        // boleh membuat kartu ini gagal tertata.
+        trailing: SizedBox(
+          width: 96,
+          child: Text(
+            detail,
+            maxLines: 2,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelMedium,
+          ),
+        ),
       ),
     );
   }
