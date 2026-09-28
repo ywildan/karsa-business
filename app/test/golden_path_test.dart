@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karsa_business/app.dart';
 import 'package:karsa_business/domain/ledger_engine.dart';
+import 'package:karsa_business/features/dashboard/dashboard_screen.dart';
 import 'package:karsa_business/features/ledger/entry_form_screen.dart';
 import 'package:karsa_business/state/app_controller.dart';
 import 'package:karsa_business/theme/app_theme.dart';
@@ -163,6 +164,22 @@ void expectSummary(WidgetTester tester, String label, String value) {
   );
 }
 
+/// Baris yang belum cukup dekat dengan layar tidak dibangun sama sekali:
+/// ListView menata isinya dengan malas, persis seperti di hp. [delta] negatif
+/// menurunkan daftar, positif mengembalikannya ke atas. Cariannya dikunci ke
+/// dalam ringkasan saja, karena tab catatan juga menyebut angka yang sama.
+Future<void> scrollRingkas(
+  WidgetTester tester,
+  String text, {
+  required double delta,
+}) async {
+  final ringkas = find.byType(DashboardScreen);
+  final target = find.descendant(of: ringkas, matching: find.text(text));
+  final list = find.descendant(of: ringkas, matching: find.byType(Scrollable));
+  await tester.scrollUntilVisible(target, delta, scrollable: list);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
@@ -214,7 +231,11 @@ void main() {
     expectCard(tester, 'Saldo kas', 'Rp 320.000');
     expect(find.text('margin 40%'), findsOneWidget);
     expect(find.text('Harga Pokok Penjualan'), findsOneWidget);
+    await scrollRingkas(tester, 'Nilai stok di rak', delta: -160.0);
     expectSummary(tester, 'Nilai stok di rak', '-Rp 10.000');
+    // Kembali ke atas: kartu saldo kas masih dibutuhkan oleh perbandingan di
+    // bawah, dan ia tidak ikut terbangun lagi kalau daftar ditinggal di tengah.
+    await scrollRingkas(tester, 'Rp 320.000', delta: 160.0);
 
     await openTab(tester, 'Catatan');
     expect(find.text('Hari ini'), findsOneWidget);
@@ -269,6 +290,7 @@ void main() {
     // Piutang lahir dari jurnal, bukan dari diketik: kas belum bergerak.
     expectCard(tester, 'Saldo kas', 'Rp 0');
     expectCard(tester, 'Pendapatan', 'Rp 30.000');
+    await scrollRingkas(tester, 'Piutang di tangan pelanggan', delta: -160.0);
     expectSummary(tester, 'Piutang di tangan pelanggan', 'Rp 30.000');
   });
 
