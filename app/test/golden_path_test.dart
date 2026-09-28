@@ -97,6 +97,14 @@ Future<void> openTab(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
+/// Keluar dari layar yang didorong, lewat navigatornya sendiri, seperti tombol
+/// back sistem. Lingkungan tes tidak menjanjikan gestur back yang bisa ditarik,
+/// jadi route-nya yang diminta menutup dirinya.
+Future<void> leaveScreen(WidgetTester tester) async {
+  await tester.state<NavigatorState>(find.byType(Navigator).first).maybePop();
+  await tester.pumpAndSettle();
+}
+
 Future<void> startBusiness(WidgetTester tester, String name) async {
   await tester.enterText(field('Warung Kopi Sore'), name);
   await touchAndSave(tester, find.text('Mulai mencatat'));
@@ -266,9 +274,7 @@ void main() {
     await tester.enterText(field('Rina'), 'Rina');
     await touchAndSave(tester, find.widgetWithText(FilledButton, 'Simpan'));
     expect(find.text('Rina'), findsOneWidget);
-    // Daftar pihak adalah layar yang didorong, bukan tab: keluar darinya lewat
-    // gestur back tidak dijamin ada di tes, jadi route-nya ditutup langsung.
-    await tester.pageBack(usePredictiveBack: false);
+    await leaveScreen(tester);
 
     await touch(tester, find.text('Catat'));
     await pickKind(tester, EntryKind.penjualanKredit);
