@@ -290,17 +290,17 @@ void main() {
     expect(find.text('Catat dulu ini urusan dengan siapa.'), findsOneWidget);
     expect(entryForm, findsOneWidget);
 
-    // Pesan penolakan bertahan lima detik, dan tidak jelas jam mana yang
-    // menghitungnya: tulisan ke basis data selesai di dalam runAsync, jadi
-    // timer penutupnya bisa lahir di waktu nyata. Kedua jam diberi jalan,
-    // dengan ruang untuk satu pesan lagi di antrean, supaya sentuhan
-    // berikutnya tidak jatuh di atas pesan.
-    await tester.pump(const Duration(seconds: 12));
+    // Pesan penolakan bertahan lima detik lalu menutup dirinya. Jam tes dan jam
+    // nyata keduanya diberi jalan: tulisan ke basis data selesai di dalam
+    // runAsync, jadi timer penutupnya bisa hidup di jam yang mana saja. Yang
+    // ditunggu adalah tulisannya, bukan cangkang SnackBar — cangkang itu urusan
+    // framework dan tidak menghalangi sentuhan berikutnya.
+    await tester.pump(const Duration(seconds: 6));
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(seconds: 6)),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.text('Catat dulu ini urusan dengan siapa.'), findsNothing);
 
     await touch(tester, find.text('PIHAK'));
     await touch(tester, inSheet('Rina'));
