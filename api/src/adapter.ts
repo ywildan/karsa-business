@@ -20,7 +20,7 @@
  */
 
 import { TABLES, type Table } from "./protocol.ts";
-import type { PlannedWrite, StoredRow } from "./sync.ts";
+import type { StoredRow } from "./sync.ts";
 import {
   bindStatement,
   businessesStatement,

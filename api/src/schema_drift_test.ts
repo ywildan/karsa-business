@@ -92,7 +92,8 @@ function sqliteTables(text: string): Map<string, string[]> {
   const expanded = text.replaceAll("$_syncColumns", shared);
   const found = new Map<string, string[]>();
   for (const block of expanded.matchAll(/CREATE TABLE \$(\w+)\s*\(([\s\S]*?)\)\s*'''/g)) {
-    const name = names.get(block[1] as string) ?? block[1];
+    const block1 = block[1] as string;
+    const name = names.get(block1) ?? block1;
     const columns: string[] = [];
     for (const line of (block[2] as string).split("\n")) {
       const trimmed = line.trim().replace(/,$/, "");

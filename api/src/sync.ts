@@ -152,7 +152,7 @@ function cleanValues(
     }
     const type = wireType(table, column);
     if (type === null) bad("unknown_column", `${at}: kolom ${column} tak dikenal`);
-    checkValue(table, column, type, value, at);
+    checkValue(column, type, value, at);
     clean[column] = value as string | number | null;
   }
   for (const column of allowed) {
@@ -169,7 +169,6 @@ function typeIsNullable(type: string | null): boolean {
 }
 
 function checkValue(
-  table: Table,
   column: string,
   type: string,
   value: unknown,
