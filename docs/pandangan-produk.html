@@ -1238,6 +1238,7 @@
                 <li>Urutan tiba = urutan menang. Satu orang mengedit baris yang sama di dua HP jarang terjadi, dan yang terakhir tersimpan yang menang.</li>
                 <li>Menghapus baris fisik tidak pernah disinkronkan; tombstone yang dikirim, lalu dibersihkan cron harian Workers setelah 30 hari.</li>
                 <li>Sejarah yang dibersihkan itu ada batasnya: <span class="mono">sync_floor</span> mencatat rev tertinggi yang dihapus. Kursor yang tertinggal di bawahnya dijawab <span class="mono">409 resync_required</span> — sesudah push bersih, HP unduh ulang penuh, bukan membuang catatan lokalnya. Baris yang tetap tidak muncul di sejarah penuh itu dinyatakan terhapus di HP saja, tanpa dijadikan klaim yang dikirim balik.</li>
+                <li>Halaman lanjutan unduh ulang dikirim dengan <span class="mono">resync=1</span>: kursornya memang masih di bawah floor, dan menolaknya lagi berarti sesi berputar selamanya. Halaman terakhir menaikkan <span class="mono">next_rev</span> ke floor supaya HP yang sudah sembuh tidak diminta sembuh lagi. Unduh ulang yang mati di tengah jalan dimulai ulang dari nol, bukan disambung dari tengah.</li>
               </ul>
             </div>
           </div>
@@ -1247,6 +1248,7 @@
               <ul class="plain">
                 <li>Offline 3 minggu → tarik bertahap 500 baris, kursor tidak pernah melompat.</li>
                 <li>Offline lewat 30 hari → server menjawab 409, HP unduh ulang penuh: penghapusan yang sudah hilang dari sejarah ikut pulih jadi <span class="mono">deleted = 1</span> lokal, dan catatan yang belum terkirim tidak tersentuh.</li>
+                <li>Unduh ulang itu putus di halaman kedua → tidak ada satu baris pun yang dipensiunkan; penanda <span class="mono">resyncing</span> membuat sesi berikutnya membaca ulang dari nol, dan kesimpulan hanya boleh datang dari daftar yang selesai.</li>
                 <li>Dibunuh tepat setelah langkah 4 → hasil akhirnya identik dengan yang tidak dibunuh.</li>
                 <li>Dua perangkat membuat baris berbeda pada saat sama → keduanya sampai, tanpa tabrakan id.</li>
                 <li>Jam pengguna mundur seminggu → urutan lokal tetap benar karena monotonic, bukan wall-clock.</li>

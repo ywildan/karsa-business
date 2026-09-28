@@ -228,6 +228,12 @@ const String kMetaDeviceId = 'device_id';
 const String kMetaLastPulledRev = 'last_pulled_rev';
 const String kMetaClockOffsetSeconds = 'clock_offset_seconds';
 
+/// `'1'` selama hp ini sedang membaca sejarah penuh dari rev nol: unduh ulang
+/// yang belum selesai tidak boleh menyimpulkan apa pun tentang baris yang tidak
+/// datang, jadi status itu harus bertahan meski aplikasinya mati di tengah
+/// daftar.
+const String kMetaResyncing = 'resyncing';
+
 /// Usaha pertama ditaburi bagan akun dari [ChartOfAccounts.seed].
 Future<String> createBusiness(
   Database db, {

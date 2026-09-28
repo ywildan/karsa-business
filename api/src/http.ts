@@ -25,6 +25,7 @@ import {
   planPull,
   planPush,
   pullLimit,
+  pullResync,
   pullSince,
 } from "./sync.ts";
 import { planVerify, readVerifyRequest } from "./license.ts";
@@ -169,7 +170,11 @@ async function push(
   return json(200, { accepted: writes.length, head: revs.at(-1) ?? 0 }, corsHeaders);
 }
 
-/** `GET /sync/pull?since_rev=`. Halaman `limit + 1` diambil, yang dikirim `limit`. */
+/**
+ * `GET /sync/pull?since_rev=&limit=&resync=1`. Halaman `limit + 1` diambil,
+ * yang dikirim `limit`. `resync=1` menandai halaman lanjutan dari satu unduh
+ * ulang penuh, yang sedang naik dari bawah floor dan tidak boleh ditolak lagi.
+ */
 async function pull(
   request: Request,
   principal: Principal,
@@ -179,9 +184,20 @@ async function pull(
   const url = new URL(request.url);
   const limit = pullLimit(url.searchParams.get("limit"));
   const since = pullSince(url.searchParams.get("since_rev"));
+  const resync = pullResync(url.searchParams.get("resync"));
   const floor = await deps.store.floorRev(principal.owner);
   const rows = await deps.store.rowsSince(principal.owner, since, limit + 1);
-  return json(200, planPull(rows, { owner: principal.owner, since_rev: since, limit, floor_rev: floor }), corsHeaders);
+  return json(
+    200,
+    planPull(rows, {
+      owner: principal.owner,
+      since_rev: since,
+      limit,
+      floor_rev: floor,
+      resync,
+    }),
+    corsHeaders,
+  );
 }
 
 /** `GET /report/trial-balance?business_id=` — jalur baca dashboard. */

@@ -74,15 +74,17 @@ class _Server {
     }
   }
 
-  List<PullRow> since(int sinceRev, int limit) {
-    // Persis `planPull`: yang tertinggal di bawah floor dijawab 409, dan yang
-    // sudah minta sejarah penuh (rev nol) tidak boleh ikut ditolak — obatnya
-    // justru itu.
-    if (sinceRev > 0 && sinceRev < _floor) throw const ResyncRequired();
-    final ready = _rows.values.where((row) => row.rev > sinceRev).toList()
+  PullPage since(int sinceRev, int limit, {bool resync = false}) {
+    // Persis `planPull`: yang tertinggal di bawah floor dijawab 409, kecuali
+    // kalau pengirimnya sedang memulihkan diri — dan permintaan sejarah penuh
+    // (rev nol) tidak pernah ikut ditolak, karena justru itulah obatnya.
+    if (!resync && sinceRev > 0 && sinceRev < _floor) {
+      throw const ResyncRequired();
+    }
+    final above = _rows.values.where((row) => row.rev > sinceRev).toList()
       ..sort((a, b) => a.rev.compareTo(b.rev));
-    return [
-      for (final row in ready.take(limit))
+    final page = [
+      for (final row in above.take(limit))
         PullRow(
           table: row.table,
           id: row.id,
@@ -90,6 +92,15 @@ class _Server {
           values: Map<String, Object?>.of(row.values),
         ),
     ];
+    var nextRev = sinceRev;
+    for (final row in page) {
+      nextRev = row.rev;
+    }
+    final hasMore = above.length > page.length;
+    // Halaman terakhir dari sejarah yang lengkap menaikkan kursor ke floor:
+    // tanpa itu hp yang baru pulih akan diminta pulih lagi, selamanya.
+    if (!hasMore && nextRev < _floor) nextRev = _floor;
+    return PullPage(rows: page, nextRev: nextRev, hasMore: hasMore);
   }
 }
 
@@ -124,13 +135,17 @@ class _Bridge implements SyncTransport {
   }
 
   @override
-  Future<List<PullRow>> pull({required int sinceRev, int limit = 500}) async {
+  Future<PullPage> pull({
+    required int sinceRev,
+    required bool resync,
+    int limit = 500,
+  }) async {
     pullCalls++;
     if (failPullAfter != null && pullCalls > failPullAfter!) {
       throw const _Offline();
     }
     if (alwaysResync) throw const ResyncRequired();
-    final page = server.since(sinceRev, pageSize ?? limit);
+    final page = server.since(sinceRev, pageSize ?? limit, resync: resync);
     // Cuma halaman sungguhan yang membuka pintu ini: permintaan yang ditolak
     // 409 tidak sedang menulis apa pun ke hp.
     if (onPull != null) await onPull!();
@@ -427,7 +442,10 @@ void main() {
         name: 'Rina',
       );
       await a.master.saveParty(businessId: a.businessId, name: 'Joko');
+      await a.session.run();
 
+      // Hp kedua sempat melihat keduanya masih hidup. Itulah yang membuat
+      // penghapusan nanti bisa hilang dari kursornya, bukan dari catatannya.
       final stale = await openPhone(server, 'usaha-bersama');
       await stale.session.run();
 
@@ -476,6 +494,29 @@ void main() {
       expect(raw.single['dirty'], 0, reason: 'kesimpulan lokal, bukan klaim');
     });
 
+    test('hp yang sudah pulih tidak menarik ulang sejarahnya', () async {
+      final seeded = await leaveOnePhoneBehind();
+      final b = seeded.stale;
+      await b.session.run();
+      expect(
+        await b.session.cursor(),
+        greaterThanOrEqualTo(b.bridge.server.floor),
+      );
+
+      // Inilah harga dari menaikkan kursor ke floor: sesi berikutnya minta
+      // delta biasa. Tanpa itu, setiap sesi menarik sejarah penuh dari awal dan
+      // "pulih" tidak pernah benar-benar selesai.
+      b.bridge.pullCalls = 0;
+      await b.session.run();
+      expect(b.bridge.pullCalls, 1);
+      expect(await b.session.cursor(), b.bridge.server.head);
+      expect(
+        await KarsaDatabase.metaValue(b.db, kMetaResyncing),
+        '0',
+        reason: 'penanda unduh ulang dilepas sekali sejarah selesai dibaca',
+      );
+    });
+
     test('catatan yang belum sampai tidak ikut dipensiunkan', () async {
       final seeded = await leaveOnePhoneBehind();
       final b = seeded.stale;
@@ -522,9 +563,11 @@ void main() {
       final seeded = await leaveOnePhoneBehind();
       final b = seeded.stale;
 
+      // Sambungan mati di halaman kedua sejarah penuh: 409, satu baris hidup,
+      // lalu diam. Yang belum sempat datang tidak bisa dinyatakan hilang.
       b.bridge.pullCalls = 0;
       b.bridge.pageSize = 1;
-      b.bridge.failPullAfter = 3;
+      b.bridge.failPullAfter = 2;
       await expectLater(b.session.run(), throwsA(isA<_Offline>()));
       b.bridge.pageSize = null;
       b.bridge.failPullAfter = null;
@@ -540,6 +583,33 @@ void main() {
         0,
         reason: 'sebagian sejarah bukan bukti bahwa sebuah baris tidak ada',
       );
+      expect(
+        await KarsaDatabase.metaValue(b.db, kMetaResyncing),
+        '1',
+        reason: 'hp ini tahu daftarnya belum selesai',
+      );
+
+      // Baru setelah sejarah itu terbaca penuh kesimpulan lokal boleh datang.
+      await b.session.run();
+      final healed = await b.db.query(
+        DbSchema.tableParty,
+        columns: ['deleted'],
+        where: 'name = ?',
+        whereArgs: ['Rina'],
+      );
+      expect(healed.single['deleted'], 1);
+      expect(b.bridge.server.floor, seeded.tombstone);
+
+      // Joko sudah masuk pada pembacaan yang terpotong. Sesi penutup membacanya
+      // ulang dari nol justru supaya ia tidak dianggap hilang oleh daftar yang
+      // dimulai dari tengah.
+      final joko = await b.db.query(
+        DbSchema.tableParty,
+        columns: ['deleted'],
+        where: 'name = ?',
+        whereArgs: ['Joko'],
+      );
+      expect(joko.single['deleted'], 0);
     });
 
     test('409 pada sejarah penuh berhenti, tidak berputar selamanya', () async {

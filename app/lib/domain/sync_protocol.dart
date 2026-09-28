@@ -32,9 +32,11 @@ enum PullOutcome {
 /// mengirim halaman lengkap — hal yang hilang dari sejarah tidak boleh
 /// terlihat seperti tidak pernah ada.
 ///
-/// Obatnya satu: unduh ulang penuh dari rev nol. Bukan buang isi hp: baris
-/// yang masih `dirty` tetap dilindungi, dan sesi selalu mengirim dulu sebelum
-/// menarik, jadi pada saat lemparan ini terangkat antrean sudah kosong.
+/// Obatnya satu: unduh ulang penuh dari rev nol, ditandai `resync=1` pada
+/// setiap halaman lanjutannya supaya server tidak menolak kursornya sendiri
+/// yang masih di bawah floor. Bukan buang isi hp: baris yang masih `dirty`
+/// tetap dilindungi, dan sesi selalu mengirim dulu sebelum menarik, jadi pada
+/// saat lemparan ini terangkat antrean sudah kosong.
 class ResyncRequired implements Exception {
   const ResyncRequired();
 }
@@ -58,6 +60,28 @@ class PullRow {
   String get key => '$table:$id';
 
   bool get isTombstone => values['deleted'] == 1;
+}
+
+/// Satu halaman hasil `GET /sync/pull`, persis bentuk JSON yang dikirim Worker.
+class PullPage {
+  const PullPage({
+    required this.rows,
+    required this.nextRev,
+    required this.hasMore,
+  });
+
+  final List<PullRow> rows;
+
+  /// Posisi server sesudah halaman ini. Pada halaman terakhir dari satu sejarah
+  /// penuh angkanya bisa lebih tinggi daripada rev baris terakhir: tombstone
+  /// yang sudah dibuang tetap dihitung sebagai "sudah kamu ketahui", dan
+  /// menaikkan kursor ke sana adalah satu-satunya cara hp yang baru pulih tidak
+  /// diminta pulih lagi selamanya.
+  final int nextRev;
+
+  final bool hasMore;
+
+  bool get isLast => !hasMore;
 }
 
 abstract final class SyncProtocol {

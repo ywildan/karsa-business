@@ -7,8 +7,10 @@ import {
   planPull,
   planPush,
   pullLimit,
+  pullResync,
   pullSince,
   type CleanRow,
+  type PullContext,
   type StoredRow,
 } from "./sync.ts";
 import { MAX_TEXT_LENGTH, PULL_PAGE } from "./protocol.ts";
@@ -235,22 +237,26 @@ function stored(rev: number, id: string, owner = "pemilik-a"): StoredRow {
   };
 }
 
+function context(over: Partial<PullContext> = {}): PullContext {
+  return { owner: "pemilik-a", since_rev: 0, limit: 10, floor_rev: 0, resync: false, ...over };
+}
+
 test("halaman unduhan menaik pada rev dan berhenti di limit", () => {
   const rows = [stored(30, PARTY), stored(10, PARTY), stored(20, PARTY)];
-  const page = planPull(rows, { owner: "pemilik-a", since_rev: 0, limit: 2, floor_rev: 0 });
+  const page = planPull(rows, context({ limit: 2 }));
   assert.deepEqual(page.rows.map((row) => row.rev), [10, 20]);
   assert.equal(page.next_rev, 20);
   assert.equal(page.has_more, true);
 });
 
 test("halaman terakhir tidak mengaku masih ada", () => {
-  const page = planPull([stored(10, PARTY)], { owner: "pemilik-a", since_rev: 5, limit: PULL_PAGE, floor_rev: 0 });
+  const page = planPull([stored(10, PARTY)], context({ since_rev: 5, limit: PULL_PAGE }));
   assert.equal(page.has_more, false);
   assert.equal(page.next_rev, 10);
 });
 
 test("rev dan pemilik tidak pernah ikut keluar", () => {
-  const page = planPull([stored(10, PARTY)], { owner: "pemilik-a", since_rev: 0, limit: 10, floor_rev: 0 });
+  const page = planPull([stored(10, PARTY)], context());
   const values = page.rows[0]?.values ?? {};
   assert.equal("rev" in values, false);
   assert.equal("owner_id" in values, false);
@@ -259,22 +265,57 @@ test("rev dan pemilik tidak pernah ikut keluar", () => {
 
 test("baris milik orang lain membatalkan halaman, bukan lolos", () => {
   assert.throws(
-    () => planPull([stored(10, PARTY, "pemilik-b")], { owner: "pemilik-a", since_rev: 0, limit: 10, floor_rev: 0 }),
+    () => planPull([stored(10, PARTY, "pemilik-b")], context()),
     (problem: unknown) => problem instanceof ProtocolError && problem.status === 500 && problem.code === "foreign_row",
   );
 });
 
 test("sejarah yang sudah diringkas tidak disamarkan", () => {
   assert.throws(
-    () => planPull([stored(90, PARTY)], { owner: "pemilik-a", since_rev: 10, limit: 10, floor_rev: 50 }),
+    () => planPull([stored(90, PARTY)], context({ since_rev: 10, floor_rev: 50 })),
     (problem: unknown) => problem instanceof ProtocolError && problem.status === 409 && problem.code === "resync_required",
   );
-  const ok = planPull([stored(90, PARTY)], { owner: "pemilik-a", since_rev: 60, limit: 10, floor_rev: 50 });
+  const ok = planPull([stored(90, PARTY)], context({ since_rev: 60, floor_rev: 50 }));
   assert.equal(ok.rows.length, 1);
   // since_rev 0 = sejarah penuh = cara memulihkan diri dari 409 di atas.
-  const fromScratch = planPull([stored(90, PARTY)], { owner: "pemilik-a", since_rev: 0, limit: 10, floor_rev: 50 });
+  const fromScratch = planPull([stored(90, PARTY)], context({ floor_rev: 50 }));
   assert.equal(fromScratch.rows.length, 1);
   assert.equal(fromScratch.next_rev, 90);
+});
+
+test("unduh ulang yang naik dari bawah floor tidak ditolak lagi", () => {
+  // Halaman pertama sejarah penuh sudah menaikkan kursor klien ke 40, yang
+  // masih di bawah floor. Menolak lagi berarti sesi berputar selamanya.
+  const page = planPull([stored(90, PARTY)], context({ since_rev: 40, floor_rev: 50, resync: true }));
+  assert.equal(page.rows.length, 1);
+  assert.equal(page.next_rev, 90);
+});
+
+test("sejarah yang selesai dibaca menaikkan kursor sampai floor", () => {
+  // Klien yang pulang dengan baris rev 40 saja tidak pernah tahu bahwa
+  // tombstone sampai rev 70 sudah dibuang. Kalau kursornya dibiarkan 40,
+  // sesi berikutnya kena 409 dan ia mengunduh ulang selamanya.
+  const last = planPull([stored(40, PARTY)], context({ floor_rev: 70, resync: true }));
+  assert.equal(last.has_more, false);
+  assert.equal(last.next_rev, 70);
+
+  const kosong = planPull([], context({ floor_rev: 70, resync: true }));
+  assert.equal(kosong.rows.length, 0);
+  assert.equal(kosong.next_rev, 70);
+
+  // Selama masih ada halaman lanjutan, floor tidak boleh dipotong: baris di
+  // atas floor belum sampai.
+  const tengah = planPull([stored(40, PARTY), stored(80, PARTY)], context({ limit: 1, floor_rev: 70, resync: true }));
+  assert.equal(tengah.has_more, true);
+  assert.equal(tengah.next_rev, 40);
+});
+
+test("resync hanya dipercaya kalau benar-benar angka satu", () => {
+  assert.equal(pullResync("1"), true);
+  assert.equal(pullResync(null), false);
+  assert.equal(pullResync(""), false);
+  assert.equal(pullResync("0"), false);
+  assert.equal(pullResync("ya"), false);
 });
 
 test("limit unduhan tidak bisa melewati plafon halaman", () => {

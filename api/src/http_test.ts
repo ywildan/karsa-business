@@ -337,8 +337,22 @@ test("sejarah yang sudah diringkas diakui sebagai 409", async () => {
   // ditolak, nasihatnya tidak bisa dijalankan dan perangkat macet selamanya.
   const fresh = await handle(request("GET", "/sync/pull", { token }), deps);
   assert.equal(fresh.status, 200);
-  const body = (await fresh.json()) as { rows: unknown[] };
+  const body = (await fresh.json()) as { rows: unknown[]; next_rev: number };
   assert.equal(body.rows.length, 1);
+  // Kursornya dinaikkan ke floor: hp yang pulang dari sini sudah memegang
+  // seluruh sejarah yang tersisa, jadi sesi berikutnya tidak boleh kena 409
+  // untuk hal yang sama, selamanya.
+  assert.equal(body.next_rev, 500);
+
+  // Halaman lanjutan dari unduh ulang yang sama: kursornya masih di bawah
+  // floor dan itu bukan kesalahan siapa-siapa, selama pengirimnya menandai
+  // dirinya sedang memulihkan diri.
+  const lanjutan = await handle(
+    request("GET", "/sync/pull?since_rev=1&limit=1&resync=1", { token }),
+    deps,
+  );
+  assert.equal(lanjutan.status, 200);
+  assert.equal((await lanjutan.json() as { next_rev: number }).next_rev, 500);
 });
 
 test("baris yang cacat membatalkan seluruh batch tanpa mengulang isinya", async () => {

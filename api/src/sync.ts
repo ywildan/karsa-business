@@ -308,6 +308,11 @@ export type PullContext = {
   limit: number;
   /** rev terkecil yang masih bisa dilayani; di bawahnya sejarah sudah ringkas. */
   floor_rev: number;
+  /**
+   * Pengirimnya sedang mengunduh ulang sejarah penuh setelah kena 409, jadi
+   * kursornya memang di bawah floor dan itu bukan kesalahan siapa-siapa.
+   */
+  resync: boolean;
 };
 
 /**
@@ -326,8 +331,10 @@ export function planPull(rows: readonly StoredRow[], context: PullContext): Pull
   // bawah ini. Jadi 409 hanya untuk perangkat yang mengaku sudah punya kursor
   // sementara kami sudah tidak bisa melanjutkan dari sana; menolak permintaan
   // dengan `since_rev` 0 berarti menyuruh klien melakukan unduh ulang dengan
-  // cara yang akan ditolak oleh dirinya sendiri.
-  if (context.since_rev > 0 && context.since_rev < context.floor_rev) {
+  // cara yang akan ditolak oleh dirinya sendiri. Halaman yang membawa
+  // `resync` ada di posisi yang sama: ia sudah diakui rusak dan sedang
+  // diperbaiki, jadi menolaknya lagi hanya membuat sesi berputar selamanya.
+  if (!context.resync && context.since_rev > 0 && context.since_rev < context.floor_rev) {
     throw new ProtocolError(
       "resync_required",
       `sejarah dari rev ${context.since_rev} sudah diringkas; unduh ulang penuh`,
@@ -345,6 +352,7 @@ export function planPull(rows: readonly StoredRow[], context: PullContext): Pull
     if (page.length >= limit) break;
     page.push(row);
   }
+  const hasMore = above.length > page.length;
   let next_rev = context.since_rev;
   const body = page.map((row) => {
     if (row.rev <= next_rev) {
@@ -360,7 +368,12 @@ export function planPull(rows: readonly StoredRow[], context: PullContext): Pull
       values: publicValues(row.table, row.values),
     };
   });
-  return { rows: body, next_rev, has_more: above.length > page.length };
+  // Halaman terakhir dari satu sejarah yang lengkap menaikkan kursor ke floor.
+  // Tanpa itu, perangkat yang baru saja sembuh justru minta lagi dari kursornya
+  // yang masih di bawah floor dan kena 409 untuk selamanya: ia sudah tahu
+  // segalanya sampai titik itu, tapi tidak punya cara mengatakannya.
+  if (!hasMore && next_rev < context.floor_rev) next_rev = context.floor_rev;
+  return { rows: body, next_rev, has_more: hasMore };
 }
 
 /** Hanya kolom yang memang bagian dari tabel itu keluar; sisanya dianggap bocor. */
@@ -394,4 +407,13 @@ export function pullSince(raw: string | null): number {
     bad("bad_since", "since_rev harus bilangan bulat tidak negatif");
   }
   return parsed;
+}
+
+/**
+ * Pengirimnya sedang memulihkan diri dari 409 dan mengunduh ulang sejarah
+ * penuh. Apa pun selain `1` dibaca sebagai permintaan delta, jadi klien lama
+ * tidak pernah tiba-tiba kehilangan perlindungan floor.
+ */
+export function pullResync(raw: string | null): boolean {
+  return raw === "1";
 }
