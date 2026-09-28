@@ -19,31 +19,71 @@ menanggung risiko itu.
 
    ```sh
    keytool -genkeypair -v -keystore kb-release.jks -storetype JKS \
-     -alias kb-release -keyalg RSA -keysize 4096 -validity 10000
+     -alias kb-release -keyalg RSA -keysize 4096 -validity 10000 \
+     -dname "CN=Karsa Business, OU=Apps, O=Ywildan, L=Semarang, ST=Jawa Tengah, C=ID"
    ```
 
-   `CN=Karsa Business, OU=Apps, O=Ywildan, L=Semarang, ST=Jawa Tengah, C=ID`
-   cukup. Dua password diminta: satu untuk keystore, satu untuk kunci. Simpan
-   keduanya di pengelola password, bukan di repo.
+   `-dname` membuat pertanyaan identitas tidak ditanyakan satu-satu. Yang tetap
+   diminta dua password: satu untuk keystore, satu untuk kunci — menjawab Enter di
+   prompt *Enter key password* berarti keduanya sama. Simpan di pengelola password,
+   bukan di repo.
+
+   Lalu catat dua angkanya. Yang pertama identitas berkas, yang kedua identitas
+   kunci — yang menentukan apakah sebuah APK bisa menerima pembaruan adalah yang
+   kedua:
+
+   ```sh
+   sha256sum kb-release.jks
+   keytool -list -v -alias kb-release -keystore kb-release.jks | grep 'SHA256:'
+   ```
+
+   Peringatan *"migrate to PKCS12"* dari keytool sengaja diabaikan: Gradle membaca
+   JKS dengan baik, dan migrasi menulis ulang berkas sehingga hash yang baru dicatat
+   tidak berlaku lagi.
+
+   Kalau belum yakin password kunci sama dengan password keystore, buktikan sebelum
+   build 15 menit dibuang — perintah ini membaca kedua password tanpa mengubah apa
+   pun (`Cannot recover key` = password kuncinya bukan yang kamu kira):
+
+   ```sh
+   keytool -importkeystore -srckeystore kb-release.jks -srcstoretype JKS \
+     -destkeystore /tmp/probe.p12 -deststoretype PKCS12
+   ```
 4. **Backup `kb-release.jks` dan kedua password ke penyimpanan privat yang kamu
    kendalikan.** Secrets GitHub tidak bisa dibaca kembali. Kehilangan kunci ini
    berarti setiap pengguna harus uninstall dan memasang ulang dari nol — untuk
    aplikasi yang catatannya hanya ada di hp mereka, itu kehilangan data nyata.
-5. Pasang empat secrets. Yang ini dikirim tanpa pernah ditampilkan:
+5. Pasang keempat secret **dari mesin sendiri**, bukan dari dalam Codespace, dan
+   dengan `gh` yang masuk sebagai pemilik repo. Diukur saat v1 dibuat: token
+   Codespaces menolak keempat-empatnya dengan
+   `failed to fetch public key: HTTP 403: Resource not accessible by integration`
+   — identitas yang diberikan sebuah Codespace bukan izin menulis secrets.
 
    ```sh
+   # dari mesin sendiri, setelah berkasnya diunduh dari panel Files
+   sha256sum kb-release.jks     # harus sama dengan yang dicatat di langkah 3
    base64 -w0 kb-release.jks | gh secret set ANDROID_KEYSTORE_BASE64 \
+     --repo ywildan/karsa-business
+   gh secret set ANDROID_KEY_ALIAS --body 'kb-release' \
      --repo ywildan/karsa-business
    ```
 
-   Tiga sisanya lewat **Settings → Secrets and variables → Actions**, karena
-   token Codespaces sering tidak punya izin menulis secrets:
+   Dua password jangan dipakai lewat `--body`: perintah yang begitu masuk ke
+   riwayat shell dan selamanya bisa dibaca ulang. Isi lewat **Settings → Secrets
+   and variables → Actions → New repository secret**, atau `gh secret set NAMANYA`
+   yang membaca stdin lalu Ctrl-D.
 
    | Nama | Isi |
    |---|---|
-   | `ANDROID_KEYSTORE_PASSWORD` | password keystore |
+   | `ANDROID_KEYSTORE_BASE64` | isi `base64 -w0 kb-release.jks` |
    | `ANDROID_KEY_ALIAS` | `kb-release` |
-   | `ANDROID_KEY_PASSWORD` | password kunci |
+   | `ANDROID_KEYSTORE_PASSWORD` | password keystore |
+   | `ANDROID_KEY_PASSWORD` | password kunci — sama dengan di atas kalau prompt *Enter key password* dijawab Enter |
+
+   Cocokkan sha256 berkas sebelum upload, jangan percaya namanya. Browser memberi
+   nama unduhan kedua sebagai `kb-release(1).jks`, dan yang hampir naik ke GitHub
+   adalah `kb-release.jks` versi lama — kunci yatim yang passwordnya tidak dikenal
+   siapa pun, dengan sidik jari yang tidak bisa dibuktikan asalnya.
 6. Hapus Codespace-nya. `kb-release.jks` tidak boleh pernah masuk artifact
    workflow, bahkan di repo private: artifact adalah jalur bocor kunci privat.
 
@@ -122,15 +162,39 @@ dan angka.
 | Tahap | Run | Commit | Artifact | sha256 |
 |---|---|---|---|---|
 | APK debug-signed pertama | [36342528276](https://github.com/ywildan/karsa-business/actions/runs/36342528276) | `bbcd184` | 10939751969 | `77eda82118d0716ce7e3ef7e0cda1e27fe99d8854f7dc611b41b89defadfdaa8` |
-| APK release-signed pertama | | | | |
+| APK release-signed pertama | [36393328993](https://github.com/ywildan/karsa-business/actions/runs/36393328993) | `3664a0a` | 10957201625 | `1a7fb6be89df6834bff28822ea63426aea0b16685bc85ff3d79138dc80aa806e` |
 
-Ukuran APK universal itu 51,5 MB sebelum dikompres, 23,8 MB setelah: satu
-berkas memuat `libapp.so` dan `libflutter.so` untuk tiga ABI, karena fitur pro
-dibuka oleh lisensi, bukan oleh build terpisah. Yang diunduh pengguna hanyalah
-bagian yang dibutuhkan hp-nya.
+Rilisnya: [`kb-v1.0.0`](https://github.com/ywildan/karsa-business/releases/tag/kb-v1.0.0).
 
-Diisi begitu tiap baris benar-benar ada. Tabel ini dibiarkan kosong daripada
-terisi perkiraan.
+Kunci yang menandatangani, dibaca `apksigner` dari berkas APK jadi pada run itu —
+bukan dari keystoret di tangan seseorang:
+
+```
+V2 Signer: certificate SHA-256 digest
+08:D7:53:97:82:68:0C:9B:0F:BA:A0:DD:62:87:F2:4F:C7:53:59:B0:31:7B:60:64:96:C1:DF:50:3E:4C:2E:33
+alias kb-release, RSA 4096-bit, SHA384withRSA, berlaku 2026-09-28 sampai 2054-02-13
+```
+
+Sidik jari yang sama tertanam di `kb-build.yml` sebagai `KB_CERT_SHA256`. Ganti
+`ANDROID_KEYSTORE_*` dengan kunci lain dan build berhenti dengan pesan yang
+menyebut kedua sidik jari. Itu disengaja: **kunci ini berjanji menandatangani
+setiap pembaruan sampai 2054**, dan menggantinya tanpa disengaja berarti semua hp
+harus uninstall dan catatan pengguna dimulai dari nol. Kalau pergantian kunci memang
+dikehendaki, angka di workflow itulah yang ikut diubah, dalam satu commit yang bisa
+dibaca orang.
+
+Ukuran yang benar untuk diperkirakan: APK universal yang diunduh pengguna dari
+Release adalah **51.507.491 byte** — satu berkas yang memuat `libapp.so` dan
+`libflutter.so` untuk tiga ABI, karena fitur pro dibuka oleh lisensi, bukan oleh
+build terpisah. Angka 23,8 MB yang pernah tercatat di dokumen ini adalah ukuran
+*artifact* Actions, yang di-zip saat diunggah; itu bukan ukuran unduhan pengguna.
+Dan karena distribusinya sideload, tidak ada pemisahan per-ABI seperti Play Store:
+yang turun ke hp ya utuh. Kalau suatu hari ukuran jadi keluhan, jalurnya
+`flutter build apk --split-per-abi` dan pengguna mengunduh salah satu dari tiga.
+
+Diisi dari artefak yang benar-benar diunduh Actions, bukan dari perkiraan. Yang
+belum ada di tabel itu adalah pasangannya di hp: belum ada satu pun angka yang
+dicocokkan dengan hitungan kertas oleh pengguna nyata.
 
 ## Setelah v1
 

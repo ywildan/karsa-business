@@ -332,6 +332,10 @@ jobs:
             echo "version tidak ada di app/pubspec.yaml" >&2
             exit 1
           fi
+          # `1.0.0+1` itu satu baris pubspec: nama versi dan nomor build.
+          # Yang jadi identitas rilis hanya nama versinya; nomor build
+          # mengikuti nomor run Actions, bukan bagian dari tag.
+          version="${version%%+*}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=kb-v${version}" >> "$GITHUB_OUTPUT"
 

@@ -11,7 +11,9 @@ _Laporan keuangan warung, reseller, dan jasa kecil — tanpa perlu akuntansi._
 
 ## Status
 
-**C0–C3 selesai. C4 menunggu satu tindakan manusia: keystore release.**
+**C0–C4 selesai. APK release-signed pertama sudah ada sebagai Release
+[`kb-v1.0.0`](https://github.com/ywildan/karsa-business/releases/tag/kb-v1.0.0). C5 dan C6
+menunggu akun cloud.**
 
 Yang sudah benar-benar ada dan terbukti di CI:
 
@@ -21,9 +23,10 @@ Yang sudah benar-benar ada dan terbukti di CI:
   usaha, menambah pihak, mencoba mencatat penjualan tanpa pihak (ditolak, alasannya terbaca),
   lalu mencatatnya dan membandingkan angka ringkasan dengan hitungan manual — piutang naik, kas
   tidak bergerak.
-- APK-nya dibangun Actions dan bisa dipasang. Sampai keystore release dibuat, tanda tangannya
-  masih tanda tangan debug — tidak ada jalur upgrade otomatis, jadi penggantian tanda tangan
-  berarti pasang ulang sekali.
+- APK-nya dibangun Actions dan ditandatangani kunci release khusus Karsa Business. Setiap build
+  membaca ulang sidik jari kunci dari APK jadi dan berhenti kalau kuncinya bukan yang
+  didokumentasikan. Distribusinya tetap sideload: tidak ada jalur upgrade otomatis, jadi
+  pembaruan dipasang sendiri oleh pengguna dari halaman Release.
 - Sisi server versi 2 (`api/`): aturan lisensi, delta sync, perapian tombstone dan laporan neraca
   saldo. 95 tes jalan di Node tanpa satu paket pun terpasang di laptop.
 - Satu workflow `Validate` dengan dua job: Dart/Flutter dan Worker. Analyzer dikeluarkan sebagai
