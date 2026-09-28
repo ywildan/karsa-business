@@ -202,7 +202,11 @@ abstract final class KarsaDatabase {
     return generated;
   }
 
-  static Future<String?> metaValue(Database db, String key) async {
+  /// Argumennya `DatabaseExecutor`, bukan `Database`: kursor unduhan harus bisa
+  /// ditulis di dalam transaksi yang sama dengan baris yang ia wakili, supaya
+  /// mati di tengah jalan tidak meninggalkan kursor yang lebih tinggi daripada
+  /// isinya.
+  static Future<String?> metaValue(DatabaseExecutor db, String key) async {
     final rows = await db.query(
       DbSchema.tableMeta,
       columns: ['value'],
@@ -213,7 +217,11 @@ abstract final class KarsaDatabase {
     return rows.isEmpty ? null : rows.first['value'] as String;
   }
 
-  static Future<void> putMeta(Database db, String key, String value) =>
+  static Future<void> putMeta(
+    DatabaseExecutor db,
+    String key,
+    String value,
+  ) =>
       db.insert(DbSchema.tableMeta, {
         'key': key,
         'value': value,
