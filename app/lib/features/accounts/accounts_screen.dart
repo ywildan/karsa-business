@@ -40,6 +40,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
       showDragHandle: true,
       builder: (_) => _AccountSheet(controller: widget.controller),
     );
+    // Lembar yang menutup dirinya tidak menata ulang layar di bawahnya; tanpa
+    // tarikan ini pos yang ditambahkan belum terlihat sampai berpindah tab.
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _remove(AccountRow account) async {
@@ -53,6 +57,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     if (!sure) return;
     final error = await widget.controller.removeAccount(account.id);
     if (!mounted) return;
+    setState(() {});
     if (error != null) say(context, error, bad: true);
   }
 

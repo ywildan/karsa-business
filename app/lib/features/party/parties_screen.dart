@@ -36,6 +36,10 @@ class _PartiesScreenState extends State<PartiesScreen> {
       builder: (sheetContext) =>
           _PartySheet(controller: widget.controller, existing: existing),
     );
+    // Lembar yang menutup dirinya tidak menata ulang layar di bawahnya, jadi
+    // daftar ditarik sendiri; tanpa ini nama baru tidak pernah muncul.
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _remove(PartyRow party) async {
@@ -49,6 +53,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
     if (!sure) return;
     final error = await widget.controller.removeParty(party.id);
     if (!mounted) return;
+    setState(() {});
     if (error != null) say(context, error, bad: true);
   }
 

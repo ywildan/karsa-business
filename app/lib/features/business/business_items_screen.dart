@@ -29,6 +29,10 @@ class _BusinessItemsScreenState extends State<BusinessItemsScreen> {
       builder: (_) =>
           _ItemSheet(controller: widget.controller, existing: existing),
     );
+    // Lembar yang menutup dirinya tidak menata ulang layar di bawahnya; tanpa
+    // tarikan ini barang yang ditambahkan belum terlihat sampai berpindah tab.
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _remove(ItemRow item) async {
@@ -40,6 +44,7 @@ class _BusinessItemsScreenState extends State<BusinessItemsScreen> {
     if (!sure) return;
     final error = await widget.controller.removeItem(item.id);
     if (!mounted) return;
+    setState(() {});
     if (error != null) say(context, error, bad: true);
   }
 
