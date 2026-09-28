@@ -34,7 +34,12 @@ class _Server {
   final Map<String, _Stored> _rows = {};
   int _rev = 0;
 
+  /// rev terendah yang masih bisa dilayani; di bawahnya sejarah sudah ringkas.
+  int _floor = 0;
+
   int get head => _rev;
+
+  int get floor => _floor;
 
   void accept(List<PushRow> batch) {
     for (final row in batch) {
@@ -50,7 +55,30 @@ class _Server {
     }
   }
 
+  /// Perapian harian Worker, dipadu kata demi kata: catat rev tombstone
+  /// tertinggi yang akan dibuang, baru buang — semuanya satu kali jalan.
+  void compact({required int olderThanRev}) {
+    var bumped = 0;
+    final doomed = <String>[];
+    for (final entry in _rows.entries) {
+      final row = entry.value;
+      if (row.values['deleted'] == 1 && row.rev <= olderThanRev) {
+        doomed.add(entry.key);
+        if (row.rev > bumped) bumped = row.rev;
+      }
+    }
+    if (doomed.isEmpty) return;
+    _floor = bumped;
+    for (final key in doomed) {
+      _rows.remove(key);
+    }
+  }
+
   List<PullRow> since(int sinceRev, int limit) {
+    // Persis `planPull`: yang tertinggal di bawah floor dijawab 409, dan yang
+    // sudah minta sejarah penuh (rev nol) tidak boleh ikut ditolak — obatnya
+    // justru itu.
+    if (sinceRev > 0 && sinceRev < _floor) throw const ResyncRequired();
     final ready = _rows.values.where((row) => row.rev > sinceRev).toList()
       ..sort((a, b) => a.rev.compareTo(b.rev));
     return [
@@ -78,7 +106,13 @@ class _Bridge implements SyncTransport {
   int? failPullAfter;
 
   bool failNextPush = false;
+  bool alwaysResync = false;
   int pullCalls = 0;
+
+  /// Pintu untuk menyimulasikan pengguna yang menulis sambil sesi berjalan —
+  /// satu-satunya cara sebuah baris bisa berstatus `dirty` pada saat unduhan
+  /// sedang dibacakan.
+  Future<void> Function()? onPull;
 
   @override
   Future<void> push(List<PushRow> rows) async {
@@ -95,7 +129,12 @@ class _Bridge implements SyncTransport {
     if (failPullAfter != null && pullCalls > failPullAfter!) {
       throw const _Offline();
     }
-    return server.since(sinceRev, pageSize ?? limit);
+    if (alwaysResync) throw const ResyncRequired();
+    final page = server.since(sinceRev, pageSize ?? limit);
+    // Cuma halaman sungguhan yang membuka pintu ini: permintaan yang ditolak
+    // 409 tidak sedang menulis apa pun ke hp.
+    if (onPull != null) await onPull!();
+    return page;
   }
 }
 
@@ -372,6 +411,154 @@ void main() {
       expect(await putus.session.cursor(), server.head);
       expect(await countOf(putus.db, DbSchema.tableParty), 6);
       expect(await snapshotOf(putus.db), await snapshotOf(utuh.db));
+    });
+  });
+
+  group('sejarah yang sudah diringkas', () {
+    /// Tinggalkan satu hp tanpa tersinkron, sementara hp lain menghapus sebuah
+    /// pihak dan perapian ikut membuang tombstone penghapusan itu. Yang punya
+    /// hp tertinggal tidak akan pernah melihat penghapusannya lagi: server cuma
+    /// bisa mengembalikan daftar yang masih hidup.
+    Future<({int tombstone, _Phone stale})> leaveOnePhoneBehind() async {
+      final server = _Server();
+      final a = await openPhone(server, 'usaha-bersama');
+      final rina = await a.master.saveParty(
+        businessId: a.businessId,
+        name: 'Rina',
+      );
+      await a.master.saveParty(businessId: a.businessId, name: 'Joko');
+
+      final stale = await openPhone(server, 'usaha-bersama');
+      await stale.session.run();
+
+      await a.master.deleteParty(rina.id);
+      await a.session.run();
+      final tombstone = server.head;
+      server.compact(olderThanRev: tombstone);
+      expect(
+        server.floor,
+        tombstone,
+        reason: 'floor = rev tombstone yang baru saja dibuang',
+      );
+      return (tombstone: tombstone, stale: stale);
+    }
+
+    test('hp yang tertinggal pulih sendiri jadi sejarah penuh', () async {
+      final seeded = await leaveOnePhoneBehind();
+      final b = seeded.stale;
+      final rinaId = (await b.db.query(
+        DbSchema.tableParty,
+        columns: ['id'],
+        where: 'name = ?',
+        whereArgs: ['Rina'],
+      )).single['id'] as String;
+
+      await b.session.run();
+
+      expect(await b.session.cursor(), b.bridge.server.head);
+      final names = (await b.master.parties(b.businessId))
+          .map((party) => party.name)
+          .toList();
+      expect(names, contains('Joko'));
+      expect(
+        names,
+        isNot(contains('Rina')),
+        reason: 'penghapusannya ikut pulih',
+      );
+
+      // Bukan hapus fisik: barisnya masih di hp, cuma dinyatakan terhapus.
+      final raw = await b.db.query(
+        DbSchema.tableParty,
+        where: 'id = ?',
+        whereArgs: [rinaId],
+      );
+      expect(raw.single['deleted'], 1);
+      expect(raw.single['dirty'], 0, reason: 'kesimpulan lokal, bukan klaim');
+    });
+
+    test('catatan yang belum sampai tidak ikut dipensiunkan', () async {
+      final seeded = await leaveOnePhoneBehind();
+      final b = seeded.stale;
+
+      // Sejarah datang sebaris-sebaris; di tengah itu pengguna menulis.
+      var wrote = false;
+      b.bridge.pageSize = 1;
+      b.bridge.onPull = () async {
+        if (wrote) return;
+        wrote = true;
+        await b.master.saveParty(businessId: b.businessId, name: 'Siti');
+      };
+      await b.session.run();
+      b.bridge.onPull = null;
+      b.bridge.pageSize = null;
+
+      final siti = await b.db.query(
+        DbSchema.tableParty,
+        where: 'name = ?',
+        whereArgs: ['Siti'],
+      );
+      expect(
+        siti.single['deleted'],
+        0,
+        reason: 'punya pengguna, belum pernah diakui server',
+      );
+      expect(siti.single['dirty'], 1);
+
+      await b.session.run();
+      final pending = await b.db.query(
+        DbSchema.tableParty,
+        columns: ['id'],
+        where: 'dirty = 1',
+      );
+      expect(pending, isEmpty);
+      expect(
+        (await b.master.parties(b.businessId)).map((party) => party.name),
+        containsAll(<String>['Joko', 'Siti']),
+      );
+      expect(b.bridge.server.head, greaterThan(seeded.tombstone));
+    });
+
+    test('unduh ulang yang terpotong tidak membuang catatan apa pun', () async {
+      final seeded = await leaveOnePhoneBehind();
+      final b = seeded.stale;
+
+      b.bridge.pullCalls = 0;
+      b.bridge.pageSize = 1;
+      b.bridge.failPullAfter = 3;
+      await expectLater(b.session.run(), throwsA(isA<_Offline>()));
+      b.bridge.pageSize = null;
+      b.bridge.failPullAfter = null;
+
+      final rina = await b.db.query(
+        DbSchema.tableParty,
+        columns: ['deleted'],
+        where: 'name = ?',
+        whereArgs: ['Rina'],
+      );
+      expect(
+        rina.single['deleted'],
+        0,
+        reason: 'sebagian sejarah bukan bukti bahwa sebuah baris tidak ada',
+      );
+    });
+
+    test('409 pada sejarah penuh berhenti, tidak berputar selamanya', () async {
+      final server = _Server();
+      final a = await openPhone(server, 'usaha-bersama');
+      await a.session.run();
+      expect(await a.session.cursor(), greaterThan(0));
+
+      final outbox = Outbox(a.db);
+      a.bridge.pullCalls = 0;
+      a.bridge.alwaysResync = true;
+      await expectLater(a.session.run(), throwsA(isA<ResyncRequired>()));
+
+      // Satu minta pada kursor lama, satu lagi sesudah kursor nol. Tidak ada
+      // putaran ketiga: 409 pada sejarah penuh berarti servernya yang salah,
+      // dan itu harus terdengar, bukan diam-diam diulang selamanya.
+      expect(a.bridge.pullCalls, 2);
+      expect(await a.session.cursor(), 0);
+      expect(await outbox.pendingCount(), 0);
     });
   });
 }

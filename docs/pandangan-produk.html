@@ -1237,7 +1237,7 @@
                 <li>Perangkat yang sama selalu boleh menimpa barisnya sendiri.</li>
                 <li>Urutan tiba = urutan menang. Satu orang mengedit baris yang sama di dua HP jarang terjadi, dan yang terakhir tersimpan yang menang.</li>
                 <li>Menghapus baris fisik tidak pernah disinkronkan; tombstone yang dikirim, lalu dibersihkan cron harian Workers setelah 30 hari.</li>
-                <li>Sejarah yang dibersihkan itu ada batasnya: <span class="mono">sync_floor</span> mencatat rev tertinggi yang dihapus. Kursor yang tertinggal di bawahnya dijawab <span class="mono">409 resync_required</span> — sesudah push bersih, HP unduh ulang penuh, bukan membuang catatan lokalnya.</li>
+                <li>Sejarah yang dibersihkan itu ada batasnya: <span class="mono">sync_floor</span> mencatat rev tertinggi yang dihapus. Kursor yang tertinggal di bawahnya dijawab <span class="mono">409 resync_required</span> — sesudah push bersih, HP unduh ulang penuh, bukan membuang catatan lokalnya. Baris yang tetap tidak muncul di sejarah penuh itu dinyatakan terhapus di HP saja, tanpa dijadikan klaim yang dikirim balik.</li>
               </ul>
             </div>
           </div>
@@ -1246,6 +1246,7 @@
             <div class="panel-body">
               <ul class="plain">
                 <li>Offline 3 minggu → tarik bertahap 500 baris, kursor tidak pernah melompat.</li>
+                <li>Offline lewat 30 hari → server menjawab 409, HP unduh ulang penuh: penghapusan yang sudah hilang dari sejarah ikut pulih jadi <span class="mono">deleted = 1</span> lokal, dan catatan yang belum terkirim tidak tersentuh.</li>
                 <li>Dibunuh tepat setelah langkah 4 → hasil akhirnya identik dengan yang tidak dibunuh.</li>
                 <li>Dua perangkat membuat baris berbeda pada saat sama → keduanya sampai, tanpa tabrakan id.</li>
                 <li>Jam pengguna mundur seminggu → urutan lokal tetap benar karena monotonic, bukan wall-clock.</li>

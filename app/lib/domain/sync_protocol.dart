@@ -23,6 +23,22 @@ enum PullOutcome {
   keepLocal,
 }
 
+/// Sejarah di bawah kursor kita sudah tidak ada lagi di server.
+///
+/// Perapian harian membuang tombstone yang lebih tua dari
+/// [SyncProtocol.tombstoneRetentionDays] dan mencatat rev tertinggi yang
+/// dibuang ke `sync_floor`. Perangkat yang kursornya tertinggal di bawah floor
+/// itu tidak bisa dilayani lagi, dan server menjawab 409 alih-alih pura-pura
+/// mengirim halaman lengkap — hal yang hilang dari sejarah tidak boleh
+/// terlihat seperti tidak pernah ada.
+///
+/// Obatnya satu: unduh ulang penuh dari rev nol. Bukan buang isi hp: baris
+/// yang masih `dirty` tetap dilindungi, dan sesi selalu mengirim dulu sebelum
+/// menarik, jadi pada saat lemparan ini terangkat antrean sudah kosong.
+class ResyncRequired implements Exception {
+  const ResyncRequired();
+}
+
 /// Satu baris hasil `GET /sync/pull`.
 class PullRow {
   const PullRow({
