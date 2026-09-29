@@ -44,7 +44,7 @@ class KarsaRepository(
         transactionDate: Long,
     ) {
         val now = System.currentTimeMillis()
-        val previous = existingId?.let(dao::getTransaction)
+        val previous = if (existingId != null) dao.getTransaction(existingId) else null
         dao.upsertTransaction(
             TransactionEntity(
                 id = previous?.id ?: UUID.randomUUID().toString(),
@@ -70,4 +70,3 @@ class KarsaRepository(
         SyncScheduler.enqueue(context)
     }
 }
-

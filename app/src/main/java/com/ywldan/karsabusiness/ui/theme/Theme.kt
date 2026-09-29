@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
+private val ColorWhite = androidx.compose.ui.graphics.Color.White
+
 private val Colors = lightColorScheme(
     primary = Forest,
     onPrimary = Cream,
@@ -33,8 +35,6 @@ private val Colors = lightColorScheme(
     onSurfaceVariant = Muted,
     error = Coral,
 )
-
-private val ColorWhite = androidx.compose.ui.graphics.Color.White
 
 private val Typography = androidx.compose.material3.Typography(
     displayLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.ExtraBold, fontSize = 42.sp, lineHeight = 46.sp),
@@ -62,4 +62,3 @@ fun KarsaTheme(content: @Composable () -> Unit) {
     }
     MaterialTheme(colorScheme = Colors, typography = Typography, content = content)
 }
-
