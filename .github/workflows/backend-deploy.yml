@@ -1,0 +1,48 @@
+name: Deploy Neon Backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Install backend dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Inject public Firebase project ID
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: sed -i "s/__FIREBASE_PROJECT_ID__/$FIREBASE_PROJECT_ID/g" functions/config.ts
+
+      - name: Type check
+        run: npm run check
+
+      - name: Apply database migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: psql "$DATABASE_URL" --set ON_ERROR_STOP=on --file migrations/001_initial.sql
+
+      - name: Link and deploy Neon Function
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          npx neon link --project-id "$NEON_PROJECT_ID"
+          npx neon deploy

@@ -1,0 +1,102 @@
+package com.ywldan.karsabusiness.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Business
+import androidx.compose.material.icons.rounded.CloudSync
+import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.ywldan.karsabusiness.BuildConfig
+import com.ywldan.karsabusiness.ui.MainUiState
+import com.ywldan.karsabusiness.ui.components.KarsaLogo
+import com.ywldan.karsabusiness.ui.theme.Cream
+import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Lime
+import com.ywldan.karsabusiness.ui.theme.Mint
+import com.ywldan.karsabusiness.ui.theme.Muted
+
+@Composable
+fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit, onLogout: () -> Unit) {
+    LazyColumn(
+        Modifier.fillMaxSize().background(Cream),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            end = 20.dp,
+            top = padding.calculateTopPadding() + 28.dp,
+            bottom = padding.calculateBottomPadding() + 28.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item { Text("Profil & pengaturan", style = MaterialTheme.typography.headlineLarge) }
+        item {
+            Row(
+                Modifier.fillMaxWidth().background(Forest, RoundedCornerShape(28.dp)).padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                KarsaLogo(Modifier.size(62.dp))
+                Column(Modifier.padding(start = 15.dp)) {
+                    Text(state.user?.name.orEmpty(), color = Color.White, style = MaterialTheme.typography.titleLarge)
+                    Text(state.user?.email.orEmpty(), color = Color.White.copy(alpha = .65f), style = MaterialTheme.typography.bodySmall)
+                    Row(Modifier.padding(top = 8.dp).background(Lime, RoundedCornerShape(100.dp)).padding(horizontal = 10.dp, vertical = 5.dp)) {
+                        Icon(Icons.Rounded.School, null, Modifier.size(15.dp), tint = Forest)
+                        Text("Mahasiswa Untidar", Modifier.padding(start = 5.dp), color = Forest, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
+                Text("Bisnis aktif", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Business, null, tint = Forest)
+                    Column(Modifier.padding(start = 12.dp)) {
+                        Text(state.business?.name.orEmpty(), fontWeight = FontWeight.ExtraBold)
+                        Text(state.business?.type.orEmpty(), color = Muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Text("Paket gratis · 1 dari 1 bisnis", Modifier.padding(top = 14.dp), color = Forest, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        item {
+            OutlinedButton(onClick = onSync, Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Icon(Icons.Rounded.CloudSync, null)
+                Text("Sinkronkan sekarang", Modifier.padding(start = 9.dp), fontWeight = FontWeight.Bold)
+            }
+        }
+        item {
+            OutlinedButton(onClick = onLogout, Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Icon(Icons.Rounded.Logout, null)
+                Text("Keluar dari akun", Modifier.padding(start = 9.dp), fontWeight = FontWeight.Bold)
+            }
+        }
+        item {
+            Text(
+                "Karsa Business v${BuildConfig.VERSION_NAME}\nData tersimpan lokal dan disinkronkan saat internet tersedia.",
+                color = Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+

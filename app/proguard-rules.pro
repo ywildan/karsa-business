@@ -1,0 +1,4 @@
+-keepattributes Signature,*Annotation*
+-keep class com.google.firebase.** { *; }
+-dontwarn org.conscrypt.**
+

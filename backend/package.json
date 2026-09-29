@@ -1,0 +1,22 @@
+{
+  "name": "karsa-business-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "deploy": "neon deploy"
+  },
+  "dependencies": {
+    "@neon/config": "latest",
+    "hono": "^4.9.9",
+    "jose": "^6.1.0",
+    "neon": "latest",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.3"
+  }
+}
+
