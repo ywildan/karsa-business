@@ -49,9 +49,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Android platform
         run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
 
@@ -88,4 +85,3 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "Karsa-Business-${RELEASE_TAG}.apk"
           gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --generate-notes --title "Karsa Business $RELEASE_TAG"
           gh release upload "$RELEASE_TAG" "Karsa-Business-${RELEASE_TAG}.apk" --clobber
-
