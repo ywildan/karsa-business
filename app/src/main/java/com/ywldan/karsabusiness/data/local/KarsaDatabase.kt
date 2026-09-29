@@ -8,7 +8,7 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [BusinessEntity::class, TransactionEntity::class],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 abstract class KarsaDatabase : RoomDatabase() {
     abstract fun karsaDao(): KarsaDao
@@ -21,4 +21,3 @@ abstract class KarsaDatabase : RoomDatabase() {
         ).fallbackToDestructiveMigration(false).build()
     }
 }
-
