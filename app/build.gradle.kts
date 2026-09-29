@@ -18,12 +18,12 @@ fun config(name: String): String {
 
 android {
     namespace = "com.ywldan.karsabusiness"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.ywldan.karsabusiness"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = config("KARSA_VERSION_NAME").ifBlank { "0.1.0" }.removePrefix("v")
 
