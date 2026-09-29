@@ -18,10 +18,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,6 +48,9 @@ import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import java.time.Instant
+import java.time.ZoneId
+import java.time.YearMonth
 
 @Composable
 fun HomeScreen(
@@ -56,6 +59,26 @@ fun HomeScreen(
     onTab: (MainTab) -> Unit,
     onAdd: (TransactionEntity?) -> Unit,
 ) {
+    val currentMonth = YearMonth.now()
+    val monthlyTransactions = state.transactions.filter { transaction ->
+        val date = Instant.ofEpochMilli(transaction.transactionDate)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+        YearMonth.from(date) == currentMonth
+    }
+    val monthlyIncome = monthlyTransactions
+        .filter { it.type == TransactionType.INCOME }
+        .sumOf { it.amount }
+    val monthlyExpense = monthlyTransactions
+        .filter { it.type == TransactionType.EXPENSE }
+        .sumOf { it.amount }
+    val monthlyProfit = monthlyIncome - monthlyExpense
+    val monthlyMargin = if (monthlyIncome > 0) {
+        monthlyProfit.toDouble() / monthlyIncome * 100
+    } else {
+        0.0
+    }
+
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -91,11 +114,50 @@ fun HomeScreen(
         }
         item {
             Column {
-                SectionHeader("Aksi cepat")
-                Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickAction("Uang masuk", Icons.Rounded.ArrowDownward, Mint, Forest, Modifier.weight(1f)) { onAdd(null) }
-                    QuickAction("Uang keluar", Icons.Rounded.ArrowUpward, Blush, Coral, Modifier.weight(1f)) { onAdd(null) }
-                    QuickAction("Catat", Icons.Rounded.Add, Lime, Forest, Modifier.weight(1f)) { onAdd(null) }
+                SectionHeader("Insight bulan ini", "Lihat laporan") { onTab(MainTab.REPORTS) }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .background(Color.White, RoundedCornerShape(24.dp))
+                        .clickable { onTab(MainTab.REPORTS) }
+                        .padding(18.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(44.dp).background(Mint, RoundedCornerShape(14.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.Insights, null, tint = Forest)
+                        }
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text("Laba bersih", color = Muted, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                rupiah(monthlyProfit),
+                                color = if (monthlyProfit >= 0) Karsa else Coral,
+                                fontWeight = FontWeight.ExtraBold,
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
+                        Icon(Icons.Rounded.ChevronRight, "Buka laporan", tint = Forest)
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        InsightMetric("Margin", "${"%.1f".format(monthlyMargin)}%", Modifier.weight(1f))
+                        InsightMetric("Transaksi", monthlyTransactions.size.toString(), Modifier.weight(1f))
+                    }
+                    Text(
+                        when {
+                            monthlyTransactions.isEmpty() -> "Mulai catat transaksi agar kondisi usahamu dapat terbaca."
+                            monthlyProfit > 0 -> "Usahamu menghasilkan laba bulan ini. Pertahankan pengeluaran tetap terkendali."
+                            else -> "Pengeluaran masih menyamai atau melebihi pemasukan. Cek biaya terbesar di laporan."
+                        },
+                        Modifier.padding(top = 14.dp),
+                        color = Muted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }
@@ -139,15 +201,12 @@ private fun BalanceMini(label: String, amount: Long, icon: ImageVector, tint: Co
 }
 
 @Composable
-private fun QuickAction(label: String, icon: ImageVector, bg: Color, tint: Color, modifier: Modifier, onClick: () -> Unit) {
+private fun InsightMetric(label: String, value: String, modifier: Modifier) {
     Column(
-        modifier.background(Color.White, RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier.background(Mint.copy(alpha = .55f), RoundedCornerShape(16.dp)).padding(12.dp),
     ) {
-        Box(Modifier.size(42.dp).background(bg, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = tint)
-        }
-        Text(label, Modifier.padding(top = 8.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+        Text(label, color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text(value, Modifier.padding(top = 2.dp), color = Forest, fontWeight = FontWeight.ExtraBold)
     }
 }
 
