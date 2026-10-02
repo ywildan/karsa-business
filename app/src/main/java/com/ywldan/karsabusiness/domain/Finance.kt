@@ -1,5 +1,6 @@
 package com.ywldan.karsabusiness.domain
 
+import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.TransactionEntity
 import com.ywldan.karsabusiness.data.local.TransactionType
 
@@ -25,3 +26,21 @@ fun calculateSummary(initialCapital: Long, transactions: List<TransactionEntity>
 fun isAllowedCampusEmail(email: String): Boolean =
     email.trim().lowercase().endsWith("@students.untidar.ac.id")
 
+
+data class InventorySummary(
+    val totalProducts: Int = 0,
+    val totalStock: Long = 0L,
+    val inventoryValue: Long = 0L,
+)
+
+fun calculateInventory(products: List<ProductEntity>): InventorySummary {
+    val active = products.filter { it.deletedAt == null }
+    return InventorySummary(
+        totalProducts = active.size,
+        totalStock = active.sumOf { it.stock },
+        inventoryValue = active.sumOf { it.stock * it.price },
+    )
+}
+
+/** Flags products that are running low so the UI can warn the user. */
+fun isLowStock(stock: Long): Boolean = stock <= 5
