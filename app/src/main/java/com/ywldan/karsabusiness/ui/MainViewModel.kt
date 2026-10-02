@@ -9,11 +9,14 @@ import com.ywldan.karsabusiness.BuildConfig
 import com.ywldan.karsabusiness.auth.AuthService
 import com.ywldan.karsabusiness.auth.AuthUser
 import com.ywldan.karsabusiness.data.local.BusinessEntity
+import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.TransactionEntity
 import com.ywldan.karsabusiness.data.local.TransactionType
 import com.ywldan.karsabusiness.data.repository.KarsaRepository
 import com.ywldan.karsabusiness.data.sync.SyncScheduler
 import com.ywldan.karsabusiness.domain.FinanceSummary
+import com.ywldan.karsabusiness.domain.InventorySummary
+import com.ywldan.karsabusiness.domain.calculateInventory
 import com.ywldan.karsabusiness.domain.calculateSummary
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +26,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class MainTab { HOME, HISTORY, REPORTS, PROFILE }
+enum class MainTab { HOME, HISTORY, PRODUCTS, REPORTS, PROFILE }
 
 data class MainUiState(
     val loading: Boolean = true,
@@ -32,9 +35,13 @@ data class MainUiState(
     val business: BusinessEntity? = null,
     val transactions: List<TransactionEntity> = emptyList(),
     val summary: FinanceSummary = FinanceSummary(0, 0, 0, 0),
+    val products: List<ProductEntity> = emptyList(),
+    val inventory: InventorySummary = InventorySummary(),
     val selectedTab: MainTab = MainTab.HOME,
     val transactionEditor: TransactionEntity? = null,
     val showTransactionForm: Boolean = false,
+    val productEditor: ProductEntity? = null,
+    val showProductForm: Boolean = false,
     val busy: Boolean = false,
     val message: String? = null,
 )
@@ -132,6 +139,8 @@ class MainViewModel(
         paymentMethod: String,
         note: String,
         transactionDate: Long,
+        productId: String? = null,
+        quantity: Long? = null,
     ) {
         val current = state.value
         val user = current.user ?: return
@@ -153,12 +162,64 @@ class MainViewModel(
                     paymentMethod = paymentMethod,
                     note = note,
                     transactionDate = transactionDate,
+                    productId = productId,
+                    quantity = quantity,
                 )
             }.onSuccess {
                 closeAdd()
                 showMessage(if (current.transactionEditor == null) "Transaksi tersimpan" else "Transaksi diperbarui")
             }.onFailure { showMessage(it.readableMessage()) }
             setBusy(false)
+        }
+    }
+
+    // ---- Products ----
+
+    fun openProductForm(product: ProductEntity? = null) {
+        _state.update { it.copy(showProductForm = true, productEditor = product) }
+    }
+
+    fun closeProductForm() {
+        _state.update { it.copy(showProductForm = false, productEditor = null) }
+    }
+
+    fun saveProduct(name: String, price: Long, stock: Long) {
+        val current = state.value
+        val user = current.user ?: return
+        val business = current.business ?: return
+        viewModelScope.launch {
+            setBusy(true)
+            runCatching {
+                val editor = current.productEditor
+                if (editor == null) {
+                    repository.createProduct(user.id, business.id, name, price, stock)
+                } else {
+                    repository.updateProduct(editor, name, price, stock)
+                }
+            }.onSuccess {
+                closeProductForm()
+                showMessage(if (current.productEditor == null) "Produk ditambahkan" else "Produk diperbarui")
+            }.onFailure { showMessage(it.readableMessage()) }
+            setBusy(false)
+        }
+    }
+
+    fun adjustStock(productId: String, delta: Long) {
+        viewModelScope.launch {
+            runCatching { repository.adjustStock(productId, delta) }
+                .onSuccess { showMessage(if (delta > 0) "Stok ditambah" else "Stok dikurangi") }
+                .onFailure { showMessage(it.readableMessage()) }
+        }
+    }
+
+    fun deleteProduct(id: String) {
+        viewModelScope.launch {
+            runCatching { repository.deleteProduct(id) }
+                .onSuccess {
+                    closeProductForm()
+                    showMessage("Produk dihapus")
+                }
+                .onFailure { showMessage(it.readableMessage()) }
         }
     }
 
@@ -193,14 +254,17 @@ class MainViewModel(
             combine(
                 repository.observeBusiness(user.id),
                 repository.observeTransactions(user.id),
-            ) { business, transactions -> business to transactions }
-                .collect { (business, transactions) ->
+                repository.observeProducts(user.id),
+            ) { business, transactions, products -> Triple(business, transactions, products) }
+                .collect { (business, transactions, products) ->
                     _state.update {
                         it.copy(
                             loading = false,
                             business = business,
                             transactions = transactions,
+                            products = products,
                             summary = calculateSummary(business?.initialCapital ?: 0, transactions),
+                            inventory = calculateInventory(products),
                         )
                     }
                 }
