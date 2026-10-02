@@ -37,6 +37,25 @@ data class TransactionEntity(
     val updatedAt: Long,
     val deletedAt: Long? = null,
     val syncStatus: String = SyncStatus.PENDING,
+    val productId: String? = null,
+    val quantity: Long? = null,
+)
+
+@Entity(
+    tableName = "products",
+    indices = [Index("ownerId"), Index("businessId")],
+)
+data class ProductEntity(
+    @PrimaryKey val id: String,
+    val ownerId: String,
+    val businessId: String,
+    val name: String,
+    val price: Long,
+    val stock: Long,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+    val syncStatus: String = SyncStatus.PENDING,
 )
 
 object TransactionType {
