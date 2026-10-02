@@ -72,7 +72,8 @@ app.post("/v1/sync", async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
   const business = requireBusiness(body.business);
   const transactions = requireTransactions(body.transactions);
-  const products = requireProducts(body.products);
+  // Older clients do not send products yet; treat a missing array as empty.
+  const products = body.products == null ? [] : requireProducts(body.products);
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
