@@ -16,6 +16,20 @@ fun config(name: String): String {
         ?: ""
 }
 
+/**
+ * Derives versionCode from KARSA_VERSION_NAME (e.g. "1.0.1" -> 1000001),
+ * so every release tag automatically gets a higher, Play-Store-compatible code
+ * instead of the previously hardcoded 1.
+ */
+fun appVersionCode(): Int {
+    val raw = config("KARSA_VERSION_NAME").ifBlank { "0.1.0" }.removePrefix("v")
+    val numbers = raw.split(".").map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+    val major = numbers.getOrElse(0) { 0 }.coerceIn(0, 999)
+    val minor = numbers.getOrElse(1) { 0 }.coerceIn(0, 999)
+    val patch = numbers.getOrElse(2) { 0 }.coerceIn(0, 999)
+    return major * 1_000_000 + minor * 1_000 + patch
+}
+
 android {
     namespace = "com.ywldan.karsabusiness"
     compileSdk = 36
@@ -24,7 +38,7 @@ android {
         applicationId = "com.ywldan.karsabusiness"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = appVersionCode()
         versionName = config("KARSA_VERSION_NAME").ifBlank { "0.1.0" }.removePrefix("v")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
