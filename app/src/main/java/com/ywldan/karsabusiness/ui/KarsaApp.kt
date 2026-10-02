@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import com.ywldan.karsabusiness.ui.screens.AuthScreen
 import com.ywldan.karsabusiness.ui.screens.MainShell
 import com.ywldan.karsabusiness.ui.screens.OnboardingScreen
+import com.ywldan.karsabusiness.ui.screens.ProductFormScreen
 import com.ywldan.karsabusiness.ui.screens.SetupBusinessScreen
 import com.ywldan.karsabusiness.ui.screens.TransactionFormScreen
 import com.ywldan.karsabusiness.ui.theme.Cream
@@ -79,9 +80,24 @@ fun KarsaApp(model: MainViewModel, activity: Activity) {
             TransactionFormScreen(
                 editing = state.transactionEditor,
                 busy = state.busy,
+                products = state.products,
                 onClose = model::closeAdd,
                 onSave = model::saveTransaction,
                 onDelete = model::deleteTransaction,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = state.showProductForm,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+        ) {
+            ProductFormScreen(
+                editing = state.productEditor,
+                busy = state.busy,
+                onClose = model::closeProductForm,
+                onSave = model::saveProduct,
+                onDelete = model::deleteProduct,
             )
         }
 
