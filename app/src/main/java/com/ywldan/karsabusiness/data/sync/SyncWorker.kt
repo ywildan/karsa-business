@@ -16,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.ywldan.karsabusiness.BuildConfig
 import com.ywldan.karsabusiness.KarsaApplication
 import com.ywldan.karsabusiness.data.local.BusinessEntity
+import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.SyncStatus
 import com.ywldan.karsabusiness.data.local.TransactionEntity
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,7 @@ class SyncWorker(
         val dao = (applicationContext as KarsaApplication).database.karsaDao()
         val business = dao.getBusiness(firebaseUser.uid)
         val pending = dao.getPendingTransactions(firebaseUser.uid)
+        val pendingProducts = dao.getPendingProducts(firebaseUser.uid)
 
         try {
             val endpoint = if (business == null) "/v1/snapshot" else "/v1/sync"
@@ -55,6 +57,7 @@ class SyncWorker(
                 val payload = JSONObject()
                     .put("business", business.toJson())
                     .put("transactions", JSONArray().apply { pending.forEach { put(it.toJson()) } })
+                    .put("products", JSONArray().apply { pendingProducts.forEach { put(it.toJson()) } })
                 connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
             }
             if (connection.responseCode !in 200..299) {
@@ -69,7 +72,14 @@ class SyncWorker(
             val remote = buildList {
                 for (index in 0 until rows.length()) add(rows.getJSONObject(index).toEntity(firebaseUser.uid))
             }
-            if (remote.isNotEmpty()) dao.upsertTransactions(remote)
+            if (remote.isNotEmpty()) dao.syncTransactions(remote)
+            val productRows = response.optJSONArray("products") ?: JSONArray()
+            val remoteProducts = buildList {
+                for (index in 0 until productRows.length()) {
+                    add(productRows.getJSONObject(index).toProduct(firebaseUser.uid))
+                }
+            }
+            if (remoteProducts.isNotEmpty()) dao.syncProducts(remoteProducts)
             Result.success()
         } catch (_: Exception) {
             Result.retry()
@@ -126,6 +136,18 @@ private fun TransactionEntity.toJson() = JSONObject()
     .put("createdAt", createdAt)
     .put("updatedAt", updatedAt)
     .put("deletedAt", deletedAt ?: JSONObject.NULL)
+    .put("productId", productId ?: JSONObject.NULL)
+    .put("quantity", quantity ?: JSONObject.NULL)
+
+private fun ProductEntity.toJson() = JSONObject()
+    .put("id", id)
+    .put("businessId", businessId)
+    .put("name", name)
+    .put("price", price)
+    .put("stock", stock)
+    .put("createdAt", createdAt)
+    .put("updatedAt", updatedAt)
+    .put("deletedAt", deletedAt ?: JSONObject.NULL)
 
 private fun JSONObject.toEntity(ownerId: String) = TransactionEntity(
     id = getString("id"),
@@ -137,6 +159,21 @@ private fun JSONObject.toEntity(ownerId: String) = TransactionEntity(
     paymentMethod = getString("paymentMethod"),
     note = optString("note"),
     transactionDate = getLong("transactionDate"),
+    createdAt = getLong("createdAt"),
+    updatedAt = getLong("updatedAt"),
+    deletedAt = if (isNull("deletedAt")) null else getLong("deletedAt"),
+    syncStatus = SyncStatus.SYNCED,
+    productId = if (isNull("productId")) null else getString("productId"),
+    quantity = if (isNull("quantity")) null else getLong("quantity"),
+)
+
+private fun JSONObject.toProduct(ownerId: String) = ProductEntity(
+    id = getString("id"),
+    ownerId = ownerId,
+    businessId = getString("businessId"),
+    name = getString("name"),
+    price = getLong("price"),
+    stock = getLong("stock"),
     createdAt = getLong("createdAt"),
     updatedAt = getLong("updatedAt"),
     deletedAt = if (isNull("deletedAt")) null else getLong("deletedAt"),
