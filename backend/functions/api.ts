@@ -48,13 +48,19 @@ app.get("/v1/snapshot", async (c) => {
     );
     const transactionResult = await client.query(
       `SELECT id, business_id, type, amount, category, payment_method, note,
-              transaction_date, created_at, updated_at, deleted_at
+              transaction_date, created_at, updated_at, deleted_at, product_id, quantity
          FROM transactions WHERE owner_id = $1 ORDER BY transaction_date DESC`,
+      [identity.uid],
+    );
+    const productResult = await client.query(
+      `SELECT id, business_id, name, price, stock, created_at, updated_at, deleted_at
+         FROM products WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY name`,
       [identity.uid],
     );
     return c.json({
       business: businessResult.rows[0] ? toApiBusiness(businessResult.rows[0]) : null,
       transactions: transactionResult.rows.map(toApiTransaction),
+      products: productResult.rows.map(toApiProduct),
     });
   } finally {
     client.release();
@@ -66,13 +72,33 @@ app.post("/v1/sync", async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
   const business = requireBusiness(body.business);
   const transactions = requireTransactions(body.transactions);
+  const products = requireProducts(body.products);
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await upsertIdentity(client, identity);
     await upsertBusiness(client, identity.uid, business);
+    const canonical = await client.query(
+      `SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1`,
+      [identity.uid],
+    );
+    const businessId = String(canonical.rows[0].id);
+    for (const product of products) {
+      await upsertProduct(client, identity.uid, businessId, product);
+    }
+    const productIds = new Set(
+      (
+        await client.query(
+          `SELECT id FROM products WHERE business_id = $1 AND owner_id = $2 AND deleted_at IS NULL`,
+          [businessId, identity.uid],
+        )
+      ).rows.map((row) => String(row.id)),
+    );
     for (const transaction of transactions) {
-      await upsertTransaction(client, identity.uid, business.id, transaction);
+      if (transaction.productId && !productIds.has(transaction.productId)) {
+        throw new Error("Unknown product");
+      }
+      await upsertTransaction(client, identity.uid, businessId, transaction);
     }
     const businessResult = await client.query(
       `SELECT id, name, type, initial_capital, created_at, updated_at
@@ -81,16 +107,22 @@ app.post("/v1/sync", async (c) => {
     );
     const result = await client.query(
       `SELECT id, business_id, type, amount, category, payment_method, note,
-              transaction_date, created_at, updated_at, deleted_at
+              transaction_date, created_at, updated_at, deleted_at, product_id, quantity
          FROM transactions
         WHERE owner_id = $1
         ORDER BY transaction_date DESC`,
+      [identity.uid],
+    );
+    const syncedProducts = await client.query(
+      `SELECT id, business_id, name, price, stock, created_at, updated_at, deleted_at
+         FROM products WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY name`,
       [identity.uid],
     );
     await client.query("COMMIT");
     return c.json({
       business: toApiBusiness(businessResult.rows[0]),
       transactions: result.rows.map(toApiTransaction),
+      products: syncedProducts.rows.map(toApiProduct),
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -117,6 +149,11 @@ type TransactionInput = {
   id: string; businessId: string; type: "INCOME" | "EXPENSE"; amount: number;
   category: string; paymentMethod: string; note: string; transactionDate: number;
   createdAt: number; updatedAt: number; deletedAt: number | null;
+  productId: string | null; quantity: number | null;
+};
+type ProductInput = {
+  id: string; businessId: string; name: string; price: number; stock: number;
+  createdAt: number; updatedAt: number; deletedAt: number | null;
 };
 
 function requireBusiness(value: unknown): BusinessInput {
@@ -142,6 +179,11 @@ function requireTransactions(value: unknown): TransactionInput[] {
     const paymentMethod = String(v.paymentMethod);
     if (!v.id || !v.businessId || !["INCOME", "EXPENSE"].includes(type)) throw new Error("Invalid transaction");
     if (!["Tunai", "QRIS", "Transfer"].includes(paymentMethod)) throw new Error("Invalid payment method");
+    const rawProductId = v.productId;
+    const productId = rawProductId == null || String(rawProductId).trim() === "" ? null : String(rawProductId);
+    const quantity = v.quantity == null ? null : safeInteger(v.quantity, false);
+    if ((productId == null) !== (quantity == null)) throw new Error("Invalid transaction product");
+    if (productId != null && type !== "INCOME") throw new Error("Invalid transaction product");
     return {
       id: String(v.id),
       businessId: String(v.businessId),
@@ -151,6 +193,28 @@ function requireTransactions(value: unknown): TransactionInput[] {
       paymentMethod,
       note: String(v.note ?? "").slice(0, 120),
       transactionDate: safeTimestamp(v.transactionDate),
+      createdAt: safeTimestamp(v.createdAt),
+      updatedAt: safeTimestamp(v.updatedAt),
+      deletedAt: v.deletedAt == null ? null : safeTimestamp(v.deletedAt),
+      productId,
+      quantity,
+    };
+  });
+}
+
+function requireProducts(value: unknown): ProductInput[] {
+  if (!Array.isArray(value) || value.length > 500) throw new Error("Invalid products");
+  return value.map((entry) => {
+    const v = entry as Record<string, unknown>;
+    if (!v.id || !v.businessId || typeof v.name !== "string" || v.name.trim().length < 1) {
+      throw new Error("Invalid product");
+    }
+    return {
+      id: String(v.id),
+      businessId: String(v.businessId),
+      name: v.name.trim().slice(0, 80),
+      price: safeInteger(v.price, true),
+      stock: safeInteger(v.stock, true),
       createdAt: safeTimestamp(v.createdAt),
       updatedAt: safeTimestamp(v.updatedAt),
       deletedAt: v.deletedAt == null ? null : safeTimestamp(v.deletedAt),
@@ -196,20 +260,54 @@ async function upsertTransaction(client: PoolClient, uid: string, businessId: st
   await client.query(
     `INSERT INTO transactions(
        id, business_id, owner_id, type, amount, category, payment_method, note,
-       transaction_date, created_at, updated_at, deleted_at
+       transaction_date, created_at, updated_at, deleted_at, product_id, quantity
      ) SELECT $1, b.id, $2, $3, $4, $5, $6, $7,
               to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), to_timestamp($10 / 1000.0),
-              CASE WHEN $11::bigint IS NULL THEN NULL ELSE to_timestamp($11 / 1000.0) END
+              CASE WHEN $11::bigint IS NULL THEN NULL ELSE to_timestamp($11 / 1000.0) END,
+              $13::uuid, $14::int
          FROM businesses b WHERE b.id = $12 AND b.owner_id = $2
      ON CONFLICT (id) DO UPDATE SET
        type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category,
        payment_method = EXCLUDED.payment_method, note = EXCLUDED.note,
        transaction_date = EXCLUDED.transaction_date, updated_at = EXCLUDED.updated_at,
-       deleted_at = EXCLUDED.deleted_at
+       deleted_at = EXCLUDED.deleted_at,
+       product_id = EXCLUDED.product_id, quantity = EXCLUDED.quantity
      WHERE transactions.owner_id = $2 AND EXCLUDED.updated_at >= transactions.updated_at`,
     [t.id, uid, t.type, t.amount, t.category, t.paymentMethod, t.note, t.transactionDate,
-      t.createdAt, t.updatedAt, t.deletedAt, businessId],
+      t.createdAt, t.updatedAt, t.deletedAt, businessId, t.productId, t.quantity],
   );
+}
+
+async function upsertProduct(client: PoolClient, uid: string, businessId: string, p: ProductInput) {
+  if (p.businessId !== businessId) throw new Error("Business mismatch");
+  await client.query(
+    `INSERT INTO products(
+       id, business_id, owner_id, name, price, stock,
+       created_at, updated_at, deleted_at
+     ) SELECT $1, b.id, $2, $3, $4, $5,
+              to_timestamp($6 / 1000.0), to_timestamp($7 / 1000.0),
+              CASE WHEN $8::bigint IS NULL THEN NULL ELSE to_timestamp($8 / 1000.0) END
+         FROM businesses b WHERE b.id = $9 AND b.owner_id = $2
+     ON CONFLICT (id) DO UPDATE SET
+       name = EXCLUDED.name, price = EXCLUDED.price, stock = EXCLUDED.stock,
+       updated_at = EXCLUDED.updated_at, deleted_at = EXCLUDED.deleted_at
+     WHERE products.owner_id = $2 AND EXCLUDED.updated_at >= products.updated_at`,
+    [p.id, uid, p.name, p.price, p.stock, p.createdAt, p.updatedAt, p.deletedAt, businessId],
+  );
+}
+
+function toApiProduct(row: Record<string, unknown>) {
+  const millis = (value: unknown) => value == null ? null : new Date(String(value)).getTime();
+  return {
+    id: row.id,
+    businessId: row.business_id,
+    name: row.name,
+    price: Number(row.price),
+    stock: Number(row.stock),
+    createdAt: millis(row.created_at),
+    updatedAt: millis(row.updated_at),
+    deletedAt: millis(row.deleted_at),
+  };
 }
 
 function toApiTransaction(row: Record<string, unknown>) {
@@ -226,6 +324,8 @@ function toApiTransaction(row: Record<string, unknown>) {
     createdAt: millis(row.created_at),
     updatedAt: millis(row.updated_at),
     deletedAt: millis(row.deleted_at),
+    productId: row.product_id ?? null,
+    quantity: row.quantity == null ? null : Number(row.quantity),
   };
 }
 
