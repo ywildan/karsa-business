@@ -13,16 +13,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.TransactionEntity
 import com.ywldan.karsabusiness.data.local.TransactionType
 import com.ywldan.karsabusiness.ui.components.PrimaryButton
@@ -68,8 +76,9 @@ private val paymentMethods = listOf("Tunai", "QRIS", "Transfer")
 fun TransactionFormScreen(
     editing: TransactionEntity?,
     busy: Boolean,
+    products: List<ProductEntity>,
     onClose: () -> Unit,
-    onSave: (String, Long, String, String, String, Long) -> Unit,
+    onSave: (String, Long, String, String, String, Long, String?, Long?) -> Unit,
     onDelete: (String) -> Unit,
 ) {
     var type by remember(editing) { mutableStateOf(editing?.type ?: TransactionType.INCOME) }
@@ -81,6 +90,14 @@ fun TransactionFormScreen(
     var note by remember(editing) { mutableStateOf(editing?.note.orEmpty()) }
     var date by remember(editing) { mutableLongStateOf(editing?.transactionDate ?: System.currentTimeMillis()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var selectedProductId by remember(editing) { mutableStateOf(editing?.productId) }
+    var quantity by remember(editing) { mutableLongStateOf(editing?.quantity ?: 1L) }
+    var productMenuExpanded by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val selectedProduct = products.find { it.id == selectedProductId }
+    // Stock already reserved by the transaction being edited counts as available.
+    val reservedQty = if (editing?.productId == selectedProduct?.id) (editing?.quantity ?: 1L) else 0L
+    val maxQuantity = (selectedProduct?.stock ?: 0L) + reservedQty
     val categories = if (type == TransactionType.INCOME) incomeCategories else expenseCategories
     val accent = if (type == TransactionType.INCOME) Karsa else Coral
 
@@ -97,7 +114,7 @@ fun TransactionFormScreen(
                 Text("Simpan pergerakan uang usahamu", color = Muted, style = MaterialTheme.typography.bodySmall)
             }
             if (editing != null) {
-                IconButton(onClick = { onDelete(editing.id) }) {
+                IconButton(onClick = { showDeleteConfirm = true }) {
                     Icon(Icons.Rounded.DeleteOutline, "Hapus", tint = Coral)
                 }
             }
@@ -111,6 +128,7 @@ fun TransactionFormScreen(
             TypeOption("Pengeluaran", type == TransactionType.EXPENSE, Coral, Modifier.weight(1f)) {
                 type = TransactionType.EXPENSE
                 if (category !in expenseCategories) category = expenseCategories.first()
+                selectedProductId = null
             }
         }
 
@@ -135,6 +153,97 @@ fun TransactionFormScreen(
                     color = accent,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        if (type == TransactionType.INCOME) {
+            Text("Produk (opsional)", Modifier.padding(top = 26.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
+            Box(Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = selectedProduct?.let { "${it.name} \u2022 ${rupiah(it.price)}" } ?: "Tanpa produk",
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { productMenuExpanded = true }) {
+                            Icon(Icons.Rounded.ArrowDropDown, "Pilih produk")
+                        }
+                    },
+                    shape = RoundedCornerShape(18.dp),
+                )
+                Box(Modifier.matchParentSize().clickable { productMenuExpanded = true })
+                DropdownMenu(
+                    expanded = productMenuExpanded,
+                    onDismissRequest = { productMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Tanpa produk") },
+                        onClick = {
+                            selectedProductId = null
+                            productMenuExpanded = false
+                        },
+                    )
+                    products.filter { it.stock > 0 }.forEach { product ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(product.name, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "${rupiah(product.price)} \u2022 Stok ${product.stock}",
+                                        color = Muted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            },
+                            onClick = {
+                                selectedProductId = product.id
+                                quantity = 1L
+                                amountText = product.price.toString()
+                                if (category != "Penjualan") category = "Penjualan"
+                                productMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+            selectedProduct?.let { product ->
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Jumlah", color = Muted, style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(
+                        onClick = {
+                            if (quantity > 1) {
+                                quantity -= 1
+                                amountText = (product.price * quantity).toString()
+                            }
+                        },
+                        modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
+                    ) { Icon(Icons.Rounded.Remove, "Kurangi", tint = Forest) }
+                    Text(
+                        quantity.toString(),
+                        Modifier.padding(horizontal = 10.dp),
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    IconButton(
+                        onClick = {
+                            if (quantity < maxQuantity) {
+                                quantity += 1
+                                amountText = (product.price * quantity).toString()
+                            }
+                        },
+                        modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
+                    ) { Icon(Icons.Rounded.Add, "Tambah", tint = Forest) }
+                }
+                Text(
+                    "Stok tersedia: $maxQuantity \u2022 Total: ${rupiah(product.price * quantity)}",
+                    color = Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
         }
@@ -169,8 +278,38 @@ fun TransactionFormScreen(
         Spacer(Modifier.height(28.dp))
         PrimaryButton(
             if (editing == null) "Simpan transaksi" else "Simpan perubahan",
-            { onSave(type, amountText.toLongOrNull() ?: 0, category, payment, note, date) },
+            {
+                onSave(
+                    type,
+                    amountText.toLongOrNull() ?: 0,
+                    category,
+                    payment,
+                    note,
+                    date,
+                    selectedProductId,
+                    selectedProductId?.let { quantity },
+                )
+            },
             busy = busy,
+        )
+    }
+
+    if (showDeleteConfirm && editing != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Hapus transaksi?") },
+            text = { Text("Transaksi ini akan dihapus dari riwayat. Stok produk yang terkait akan dikembalikan.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete(editing.id)
+                    },
+                ) { Text("Hapus", color = Coral, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Batal") }
+            },
         )
     }
 
