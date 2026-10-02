@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material3.FloatingActionButton
@@ -37,6 +38,7 @@ private data class TabItem(val tab: MainTab, val label: String, val icon: ImageV
 private val tabs = listOf(
     TabItem(MainTab.HOME, "Beranda", Icons.Rounded.Home),
     TabItem(MainTab.HISTORY, "Transaksi", Icons.Rounded.ReceiptLong),
+    TabItem(MainTab.PRODUCTS, "Produk", Icons.Rounded.Inventory2),
     TabItem(MainTab.REPORTS, "Laporan", Icons.Rounded.Assessment),
     TabItem(MainTab.PROFILE, "Profil", Icons.Rounded.Person),
 )
@@ -65,13 +67,20 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
             }
         },
         floatingActionButton = {
-            if (state.selectedTab == MainTab.HOME || state.selectedTab == MainTab.HISTORY) {
-                FloatingActionButton(
+            when (state.selectedTab) {
+                MainTab.HOME, MainTab.HISTORY -> FloatingActionButton(
                     onClick = { model.openAdd() },
                     shape = CircleShape,
                     containerColor = Lime,
                     contentColor = Forest,
                 ) { Icon(Icons.Rounded.Add, "Catat transaksi") }
+                MainTab.PRODUCTS -> FloatingActionButton(
+                    onClick = { model.openProductForm() },
+                    shape = CircleShape,
+                    containerColor = Lime,
+                    contentColor = Forest,
+                ) { Icon(Icons.Rounded.Add, "Tambah produk") }
+                else -> Unit
             }
         },
     ) { padding ->
@@ -79,6 +88,7 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
             when (tab) {
                 MainTab.HOME -> HomeScreen(state, padding, model::selectTab, model::openAdd)
                 MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd)
+                MainTab.PRODUCTS -> ProductScreen(state, padding, model)
                 MainTab.REPORTS -> ReportsScreen(state, padding)
                 MainTab.PROFILE -> ProfileScreen(state, padding, model::syncNow, model::signOut)
             }
