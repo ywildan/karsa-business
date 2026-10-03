@@ -6,23 +6,23 @@
          oleh ic_launcher_background. -->
     <path
         android:strokeColor="#0E3B2E"
-        android:strokeWidth="12.2"
+        android:strokeWidth="9.8"
         android:strokeLineCap="round"
-        android:pathData="M22.8,31.6V76.4" />
+        android:pathData="M29,36.1V71.9" />
     <path
         android:strokeColor="#0E3B2E"
-        android:strokeWidth="11.4"
+        android:strokeWidth="9.1"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M22.8,54L49.8,31.6M22.8,54L49.8,76.4" />
+        android:pathData="M29,54L50.6,36.1M29,54L50.6,71.9" />
     <path
         android:strokeColor="#0E3B2E"
-        android:strokeWidth="12.2"
+        android:strokeWidth="9.8"
         android:strokeLineCap="round"
-        android:pathData="M65,31.6V76.4" />
+        android:pathData="M62.8,36.1V71.9" />
     <path
         android:strokeColor="#0E3B2E"
-        android:strokeWidth="11.4"
+        android:strokeWidth="9.1"
         android:strokeLineCap="round"
-        android:pathData="M64.9,65.8a10.6,10.6 0 1,0 21.1,0a10.6,10.6 0 1,0 -21.1,0" />
+        android:pathData="M62.8,63.5a8.4,8.4 0 1,0 16.8,0a8.4,8.4 0 1,0 -16.8,0" />
 </vector>
