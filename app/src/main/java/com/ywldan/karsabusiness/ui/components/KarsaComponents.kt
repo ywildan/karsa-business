@@ -40,6 +40,12 @@ fun rupiah(amount: Long): String = NumberFormat.getCurrencyInstance(Indonesian)
     .replace(",00", "")
     .replace("Rp", "Rp ")
 
+/** Format digit mentah untuk field input harga: "10000" -> "10.000"; "" bila kosong. */
+fun formatRupiahInput(digits: String): String {
+    val number = digits.toLongOrNull() ?: return ""
+    return NumberFormat.getNumberInstance(Indonesian).format(number)
+}
+
 @Composable
 fun KarsaLogo(modifier: Modifier = Modifier, dark: Boolean = false) {
     val background = if (dark) Forest else Lime
