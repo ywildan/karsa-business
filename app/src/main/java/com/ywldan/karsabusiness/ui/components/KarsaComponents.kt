@@ -48,17 +48,24 @@ fun KarsaLogo(modifier: Modifier = Modifier, dark: Boolean = false) {
         Canvas(Modifier.padding(9.dp)) {
             val w = size.width
             val h = size.height
-            val path = Path().apply {
-                moveTo(w * .22f, h * .12f)
-                lineTo(w * .22f, h * .88f)
-                moveTo(w * .22f, h * .55f)
-                lineTo(w * .72f, h * .12f)
-                moveTo(w * .4f, h * .42f)
-                lineTo(w * .8f, h * .88f)
+            val stem = Stroke(width = w * .091f, cap = StrokeCap.Round)
+            val detail = Stroke(width = w * .084f, cap = StrokeCap.Round)
+            /* Huruf "Kb" gaya stroke, sama dengan ikon launcher. */
+            val stems = Path().apply {
+                moveTo(w * .269f, h * .334f)
+                lineTo(w * .269f, h * .666f)
+                moveTo(w * .581f, h * .334f)
+                lineTo(w * .581f, h * .666f)
             }
-            drawPath(path, foreground, style = Stroke(width = w * .14f, cap = StrokeCap.Round))
-            drawLine(foreground, Offset(w * .58f, h * .1f), Offset(w * .88f, h * .1f), w * .08f, StrokeCap.Round)
-            drawLine(foreground, Offset(w * .88f, h * .1f), Offset(w * .88f, h * .4f), w * .08f, StrokeCap.Round)
+            drawPath(stems, foreground, style = stem)
+            val arms = Path().apply {
+                moveTo(w * .269f, h * .5f)
+                lineTo(w * .469f, h * .334f)
+                moveTo(w * .269f, h * .5f)
+                lineTo(w * .469f, h * .666f)
+            }
+            drawPath(arms, foreground, style = detail)
+            drawCircle(foreground, radius = w * .078f, center = Offset(w * .659f, h * .588f), style = detail)
         }
     }
 }
