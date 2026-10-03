@@ -54,6 +54,7 @@ import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.TransactionEntity
 import com.ywldan.karsabusiness.data.local.TransactionType
 import com.ywldan.karsabusiness.ui.components.PrimaryButton
+import com.ywldan.karsabusiness.ui.components.formatRupiahInput
 import com.ywldan.karsabusiness.ui.components.rupiah
 import com.ywldan.karsabusiness.ui.theme.Blush
 import com.ywldan.karsabusiness.ui.theme.Coral
@@ -82,7 +83,7 @@ fun TransactionFormScreen(
     onDelete: (String) -> Unit,
 ) {
     var type by remember(editing) { mutableStateOf(editing?.type ?: TransactionType.INCOME) }
-    var amountText by remember(editing) { mutableStateOf(editing?.amount?.toString().orEmpty()) }
+    var amountText by remember(editing) { mutableStateOf(formatRupiahInput(editing?.amount?.toString().orEmpty())) }
     var category by remember(editing, type) {
         mutableStateOf(editing?.category ?: if (type == TransactionType.INCOME) incomeCategories.first() else expenseCategories.first())
     }
@@ -135,7 +136,7 @@ fun TransactionFormScreen(
         Text("NOMINAL", Modifier.padding(top = 28.dp), color = Muted, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(
             value = amountText,
-            onValueChange = { amountText = it.filter(Char::isDigit).take(12) },
+            onValueChange = { amountText = formatRupiahInput(it.filter(Char::isDigit).take(12)) },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             prefix = { Text("Rp ", color = accent, fontWeight = FontWeight.ExtraBold) },
             textStyle = MaterialTheme.typography.headlineMedium.copy(color = Forest),
@@ -148,7 +149,7 @@ fun TransactionFormScreen(
                 Text(
                     "+${rupiah(quick)}",
                     Modifier.background(Color.White, RoundedCornerShape(100.dp)).clickable {
-                        amountText = ((amountText.toLongOrNull() ?: 0) + quick).toString()
+                        amountText = formatRupiahInput(((amountText.filter(Char::isDigit).toLongOrNull() ?: 0) + quick).toString())
                     }.padding(horizontal = 12.dp, vertical = 8.dp),
                     color = accent,
                     fontWeight = FontWeight.Bold,
@@ -199,7 +200,7 @@ fun TransactionFormScreen(
                             onClick = {
                                 selectedProductId = product.id
                                 quantity = 1L
-                                amountText = product.price.toString()
+                                amountText = formatRupiahInput(product.price.toString())
                                 if (category != "Penjualan") category = "Penjualan"
                                 productMenuExpanded = false
                             },
@@ -218,7 +219,7 @@ fun TransactionFormScreen(
                         onClick = {
                             if (quantity > 1) {
                                 quantity -= 1
-                                amountText = (product.price * quantity).toString()
+                                amountText = formatRupiahInput((product.price * quantity).toString())
                             }
                         },
                         modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
@@ -233,7 +234,7 @@ fun TransactionFormScreen(
                         onClick = {
                             if (quantity < maxQuantity) {
                                 quantity += 1
-                                amountText = (product.price * quantity).toString()
+                                amountText = formatRupiahInput((product.price * quantity).toString())
                             }
                         },
                         modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
@@ -281,7 +282,7 @@ fun TransactionFormScreen(
             {
                 onSave(
                     type,
-                    amountText.toLongOrNull() ?: 0,
+                    amountText.filter(Char::isDigit).toLongOrNull() ?: 0,
                     category,
                     payment,
                     note,
