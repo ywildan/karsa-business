@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.ui.components.PrimaryButton
+import com.ywldan.karsabusiness.ui.components.formatRupiahInput
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
@@ -51,7 +52,7 @@ fun ProductFormScreen(
     onDelete: (String) -> Unit,
 ) {
     var name by remember(editing) { mutableStateOf(editing?.name.orEmpty()) }
-    var priceText by remember(editing) { mutableStateOf(editing?.price?.toString().orEmpty()) }
+    var priceText by remember(editing) { mutableStateOf(formatRupiahInput(editing?.price?.toString().orEmpty())) }
     var stockText by remember(editing) { mutableStateOf(editing?.stock?.toString().orEmpty()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -106,7 +107,7 @@ fun ProductFormScreen(
         )
         OutlinedTextField(
             value = priceText,
-            onValueChange = { priceText = it.filter(Char::isDigit).take(12) },
+            onValueChange = { priceText = formatRupiahInput(it.filter(Char::isDigit).take(12)) },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             prefix = { Text("Rp ", color = Forest, fontWeight = FontWeight.ExtraBold) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -134,7 +135,7 @@ fun ProductFormScreen(
         Spacer(Modifier.height(28.dp))
         PrimaryButton(
             if (editing == null) "Simpan produk" else "Simpan perubahan",
-            { onSave(name.trim(), priceText.toLongOrNull() ?: 0L, stockText.toLongOrNull() ?: 0L) },
+            { onSave(name.trim(), priceText.filter(Char::isDigit).toLongOrNull() ?: 0L, stockText.toLongOrNull() ?: 0L) },
             busy = busy,
             enabled = name.isNotBlank(),
         )
