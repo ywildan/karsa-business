@@ -10,6 +10,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -27,6 +29,7 @@ import com.ywldan.karsabusiness.ui.screens.OnboardingScreen
 import com.ywldan.karsabusiness.ui.screens.ProductFormScreen
 import com.ywldan.karsabusiness.ui.screens.SetupBusinessScreen
 import com.ywldan.karsabusiness.ui.screens.TransactionFormScreen
+import com.ywldan.karsabusiness.ui.components.KarsaSnackbar
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
 
@@ -101,7 +104,10 @@ fun KarsaApp(model: MainViewModel, activity: Activity) {
             )
         }
 
-        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 12.dp),
+        ) { data -> KarsaSnackbar(data) }
     }
 }
 
