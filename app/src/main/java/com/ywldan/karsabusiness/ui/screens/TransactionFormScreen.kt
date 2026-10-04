@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -102,197 +104,205 @@ fun TransactionFormScreen(
     val categories = if (type == TransactionType.INCOME) incomeCategories else expenseCategories
     val accent = if (type == TransactionType.INCOME) Karsa else Coral
 
-    Column(
-        Modifier.fillMaxSize().background(Cream).verticalScroll(rememberScrollState())
-            .navigationBarsPadding().padding(horizontal = 22.dp).padding(top = 40.dp, bottom = 28.dp),
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose, modifier = Modifier.background(Color.White, CircleShape)) {
-                Icon(Icons.Rounded.Close, "Tutup")
-            }
-            Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                Text(if (editing == null) "Catat transaksi" else "Edit transaksi", style = MaterialTheme.typography.headlineMedium)
-                Text("Simpan pergerakan uang usahamu", color = Muted, style = MaterialTheme.typography.bodySmall)
-            }
-            if (editing != null) {
-                IconButton(onClick = { showDeleteConfirm = true }) {
-                    Icon(Icons.Rounded.DeleteOutline, "Hapus", tint = Coral)
+    Column(Modifier.fillMaxSize().background(Cream).navigationBarsPadding()) {
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp).padding(top = 40.dp, bottom = 28.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onClose, modifier = Modifier.background(Color.White, CircleShape)) {
+                    Icon(Icons.Rounded.Close, "Tutup")
                 }
-            }
-        }
-
-        Row(Modifier.fillMaxWidth().padding(top = 24.dp).background(Color.White, RoundedCornerShape(18.dp)).padding(4.dp)) {
-            TypeOption("Pemasukan", type == TransactionType.INCOME, Karsa, Modifier.weight(1f)) {
-                type = TransactionType.INCOME
-                if (category !in incomeCategories) category = incomeCategories.first()
-            }
-            TypeOption("Pengeluaran", type == TransactionType.EXPENSE, Coral, Modifier.weight(1f)) {
-                type = TransactionType.EXPENSE
-                if (category !in expenseCategories) category = expenseCategories.first()
-                selectedProductId = null
-            }
-        }
-
-        Text("NOMINAL", Modifier.padding(top = 28.dp), color = Muted, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(
-            value = amountText,
-            onValueChange = { amountText = formatRupiahInput(it.filter(Char::isDigit).take(12)) },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            prefix = { Text("Rp ", color = accent, fontWeight = FontWeight.ExtraBold) },
-            textStyle = MaterialTheme.typography.headlineMedium.copy(color = Forest),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = RoundedCornerShape(18.dp),
-        )
-        FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(10_000L, 25_000L, 50_000L, 100_000L).forEach { quick ->
-                Text(
-                    "+${rupiah(quick)}",
-                    Modifier.background(Color.White, RoundedCornerShape(100.dp)).clickable {
-                        amountText = formatRupiahInput(((amountText.filter(Char::isDigit).toLongOrNull() ?: 0) + quick).toString())
-                    }.padding(horizontal = 12.dp, vertical = 8.dp),
-                    color = accent,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
-        if (type == TransactionType.INCOME) {
-            Text("Produk (opsional)", Modifier.padding(top = 26.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
-            Box(Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = selectedProduct?.let { "${it.name} \u2022 ${rupiah(it.price)}" } ?: "Tanpa produk",
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        IconButton(onClick = { productMenuExpanded = true }) {
-                            Icon(Icons.Rounded.ArrowDropDown, "Pilih produk")
-                        }
-                    },
-                    shape = RoundedCornerShape(18.dp),
-                )
-                Box(Modifier.matchParentSize().clickable { productMenuExpanded = true })
-                DropdownMenu(
-                    expanded = productMenuExpanded,
-                    onDismissRequest = { productMenuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Tanpa produk") },
-                        onClick = {
-                            selectedProductId = null
-                            productMenuExpanded = false
-                        },
-                    )
-                    products.filter { it.stock > 0 }.forEach { product ->
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(product.name, fontWeight = FontWeight.Bold)
-                                    Text(
-                                        "${rupiah(product.price)} \u2022 Stok ${product.stock}",
-                                        color = Muted,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                            },
-                            onClick = {
-                                selectedProductId = product.id
-                                quantity = 1L
-                                amountText = formatRupiahInput(product.price.toString())
-                                if (category != "Penjualan") category = "Penjualan"
-                                productMenuExpanded = false
-                            },
-                        )
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text(if (editing == null) "Catat transaksi" else "Edit transaksi", style = MaterialTheme.typography.headlineMedium)
+                    Text("Simpan pergerakan uang usahamu", color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
+                if (editing != null) {
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(Icons.Rounded.DeleteOutline, "Hapus", tint = Coral)
                     }
                 }
             }
-            selectedProduct?.let { product ->
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Jumlah", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    Spacer(Modifier.weight(1f))
-                    IconButton(
-                        onClick = {
-                            if (quantity > 1) {
-                                quantity -= 1
-                                amountText = formatRupiahInput((product.price * quantity).toString())
-                            }
-                        },
-                        modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
-                    ) { Icon(Icons.Rounded.Remove, "Kurangi", tint = Forest) }
-                    Text(
-                        quantity.toString(),
-                        Modifier.padding(horizontal = 10.dp),
-                        fontWeight = FontWeight.ExtraBold,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    IconButton(
-                        onClick = {
-                            if (quantity < maxQuantity) {
-                                quantity += 1
-                                amountText = formatRupiahInput((product.price * quantity).toString())
-                            }
-                        },
-                        modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
-                    ) { Icon(Icons.Rounded.Add, "Tambah", tint = Forest) }
-                }
-                Text(
-                    "Stok tersedia: $maxQuantity \u2022 Total: ${rupiah(product.price * quantity)}",
-                    color = Muted,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-        }
 
-        Text("Kategori", Modifier.padding(top = 26.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            categories.forEach { item ->
-                ChoiceChip(item, category == item, accent) { category = item }
+            Row(Modifier.fillMaxWidth().padding(top = 24.dp).background(Color.White, RoundedCornerShape(18.dp)).padding(4.dp)) {
+                TypeOption("Pemasukan", type == TransactionType.INCOME, Karsa, Modifier.weight(1f)) {
+                    type = TransactionType.INCOME
+                    if (category !in incomeCategories) category = incomeCategories.first()
+                }
+                TypeOption("Pengeluaran", type == TransactionType.EXPENSE, Coral, Modifier.weight(1f)) {
+                    type = TransactionType.EXPENSE
+                    if (category !in expenseCategories) category = expenseCategories.first()
+                    selectedProductId = null
+                }
             }
+
+            Text("NOMINAL", Modifier.padding(top = 28.dp), color = Muted, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { amountText = formatRupiahInput(it.filter(Char::isDigit).take(12)) },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                prefix = { Text("Rp ", color = accent, fontWeight = FontWeight.ExtraBold) },
+                textStyle = MaterialTheme.typography.headlineMedium.copy(color = Forest),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+            )
+            FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(10_000L, 25_000L, 50_000L, 100_000L).forEach { quick ->
+                    Text(
+                        "+${rupiah(quick)}",
+                        Modifier.background(Color.White, RoundedCornerShape(100.dp)).clickable {
+                            amountText = formatRupiahInput(((amountText.filter(Char::isDigit).toLongOrNull() ?: 0) + quick).toString())
+                        }.padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = accent,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            if (type == TransactionType.INCOME) {
+                Text("Produk (opsional)", Modifier.padding(top = 26.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedProduct?.let { "${it.name} \u2022 ${rupiah(it.price)}" } ?: "Tanpa produk",
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            IconButton(onClick = { productMenuExpanded = true }) {
+                                Icon(Icons.Rounded.ArrowDropDown, "Pilih produk")
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                    )
+                    Box(Modifier.matchParentSize().clickable { productMenuExpanded = true })
+                    DropdownMenu(
+                        expanded = productMenuExpanded,
+                        onDismissRequest = { productMenuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Tanpa produk") },
+                            onClick = {
+                                selectedProductId = null
+                                productMenuExpanded = false
+                            },
+                        )
+                        products.filter { it.stock > 0 }.forEach { product ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(product.name, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            "${rupiah(product.price)} \u2022 Stok ${product.stock}",
+                                            color = Muted,
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    selectedProductId = product.id
+                                    quantity = 1L
+                                    amountText = formatRupiahInput(product.price.toString())
+                                    if (category != "Penjualan") category = "Penjualan"
+                                    productMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+                selectedProduct?.let { product ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Jumlah", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.weight(1f))
+                        IconButton(
+                            onClick = {
+                                if (quantity > 1) {
+                                    quantity -= 1
+                                    amountText = formatRupiahInput((product.price * quantity).toString())
+                                }
+                            },
+                            modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
+                        ) { Icon(Icons.Rounded.Remove, "Kurangi", tint = Forest) }
+                        Text(
+                            quantity.toString(),
+                            Modifier.padding(horizontal = 10.dp),
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        IconButton(
+                            onClick = {
+                                if (quantity < maxQuantity) {
+                                    quantity += 1
+                                    amountText = formatRupiahInput((product.price * quantity).toString())
+                                }
+                            },
+                            modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
+                        ) { Icon(Icons.Rounded.Add, "Tambah", tint = Forest) }
+                    }
+                    Text(
+                        "Stok tersedia: $maxQuantity \u2022 Total: ${rupiah(product.price * quantity)}",
+                        color = Muted,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+
+            Text("Kategori", Modifier.padding(top = 26.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                categories.forEach { item ->
+                    ChoiceChip(item, category == item, accent) { category = item }
+                }
+            }
+            Text("Metode pembayaran", Modifier.padding(top = 24.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                paymentMethods.forEach { item -> ChoiceChip(item, payment == item, Forest) { payment = item } }
+            }
+            Text("Tanggal", Modifier.padding(top = 24.dp, bottom = 8.dp), fontWeight = FontWeight.ExtraBold)
+            Text(
+                formatDate(date),
+                Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).clickable { showDatePicker = true }
+                    .padding(16.dp),
+                color = Forest,
+                fontWeight = FontWeight.Bold,
+            )
+            OutlinedTextField(
+                note,
+                { note = it.take(120) },
+                Modifier.fillMaxWidth().padding(top = 20.dp),
+                label = { Text("Catatan (opsional)") },
+                placeholder = { Text("Contoh: 10 gelas es kopi") },
+                minLines = 2,
+                shape = RoundedCornerShape(18.dp),
+            )
         }
-        Text("Metode pembayaran", Modifier.padding(top = 24.dp, bottom = 10.dp), fontWeight = FontWeight.ExtraBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            paymentMethods.forEach { item -> ChoiceChip(item, payment == item, Forest) { payment = item } }
+        Surface(
+            color = Cream,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            PrimaryButton(
+                if (editing == null) "Simpan transaksi" else "Simpan perubahan",
+                {
+                    onSave(
+                        type,
+                        amountText.filter(Char::isDigit).toLongOrNull() ?: 0,
+                        category,
+                        payment,
+                        note,
+                        date,
+                        selectedProductId,
+                        selectedProductId?.let { quantity },
+                    )
+                },
+                busy = busy,
+                modifier = Modifier.padding(horizontal = 22.dp).padding(top = 12.dp, bottom = 16.dp),
+            )
         }
-        Text("Tanggal", Modifier.padding(top = 24.dp, bottom = 8.dp), fontWeight = FontWeight.ExtraBold)
-        Text(
-            formatDate(date),
-            Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).clickable { showDatePicker = true }
-                .padding(16.dp),
-            color = Forest,
-            fontWeight = FontWeight.Bold,
-        )
-        OutlinedTextField(
-            note,
-            { note = it.take(120) },
-            Modifier.fillMaxWidth().padding(top = 20.dp),
-            label = { Text("Catatan (opsional)") },
-            placeholder = { Text("Contoh: 10 gelas es kopi") },
-            minLines = 2,
-            shape = RoundedCornerShape(18.dp),
-        )
-        Spacer(Modifier.height(28.dp))
-        PrimaryButton(
-            if (editing == null) "Simpan transaksi" else "Simpan perubahan",
-            {
-                onSave(
-                    type,
-                    amountText.filter(Char::isDigit).toLongOrNull() ?: 0,
-                    category,
-                    payment,
-                    note,
-                    date,
-                    selectedProductId,
-                    selectedProductId?.let { quantity },
-                )
-            },
-            busy = busy,
-        )
     }
 
     if (showDeleteConfirm && editing != null) {
