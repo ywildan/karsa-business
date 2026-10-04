@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,6 +74,28 @@ fun KarsaLogo(modifier: Modifier = Modifier, dark: Boolean = false) {
             }
             drawPath(arms, foreground, style = detail)
             drawCircle(foreground, radius = w * .078f, center = Offset(w * .659f, h * .588f), style = detail)
+        }
+    }
+}
+
+@Composable
+fun KarsaSnackbar(data: SnackbarData) {
+    /* Notifikasi gaya aplikasi: kartu putih dengan mini logo, bukan snackbar gelap bawaan. */
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White,
+        shadowElevation = 8.dp,
+        modifier = Modifier.padding(horizontal = 22.dp).fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            KarsaLogo(Modifier.size(38.dp))
+            Text(
+                data.visuals.message,
+                Modifier.weight(1f).padding(start = 12.dp),
+                color = Forest,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }
