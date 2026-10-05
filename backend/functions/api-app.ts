@@ -369,8 +369,7 @@ async function upsertTransaction(
   businessId: string,
   t: TransactionInput,
 ) {
-  await requireOwnedId(client, "transactions", t.id, uid);
-  await client.query(
+  const result = await client.query(
     `INSERT INTO transactions(
        id, business_id, owner_id, type, amount, category, payment_method, note,
        transaction_date, created_at, updated_at, deleted_at, product_id, quantity
@@ -385,7 +384,8 @@ async function upsertTransaction(
        transaction_date = EXCLUDED.transaction_date, updated_at = EXCLUDED.updated_at,
        deleted_at = EXCLUDED.deleted_at,
        product_id = EXCLUDED.product_id, quantity = EXCLUDED.quantity
-     WHERE transactions.owner_id = $2 AND EXCLUDED.updated_at >= transactions.updated_at`,
+     WHERE transactions.owner_id = $2 AND EXCLUDED.updated_at >= transactions.updated_at
+     RETURNING id`,
     [
       t.id,
       uid,
@@ -403,7 +403,8 @@ async function upsertTransaction(
       t.quantity,
     ],
   );
-  await requireOwnedId(client, "transactions", t.id, uid);
+  if (result.rowCount === 0)
+    await requireOwnedId(client, "transactions", t.id, uid);
 }
 
 async function upsertProduct(
@@ -412,8 +413,7 @@ async function upsertProduct(
   businessId: string,
   p: ProductInput,
 ) {
-  await requireOwnedId(client, "products", p.id, uid);
-  await client.query(
+  const result = await client.query(
     `INSERT INTO products(
        id, business_id, owner_id, name, price, stock,
        created_at, updated_at, deleted_at
@@ -424,7 +424,8 @@ async function upsertProduct(
      ON CONFLICT (id) DO UPDATE SET
        name = EXCLUDED.name, price = EXCLUDED.price, stock = EXCLUDED.stock,
        updated_at = EXCLUDED.updated_at, deleted_at = EXCLUDED.deleted_at
-     WHERE products.owner_id = $2 AND EXCLUDED.updated_at >= products.updated_at`,
+     WHERE products.owner_id = $2 AND EXCLUDED.updated_at >= products.updated_at
+     RETURNING id`,
     [
       p.id,
       uid,
@@ -437,7 +438,8 @@ async function upsertProduct(
       businessId,
     ],
   );
-  await requireOwnedId(client, "products", p.id, uid);
+  if (result.rowCount === 0)
+    await requireOwnedId(client, "products", p.id, uid);
 }
 
 async function requireOwnedId(

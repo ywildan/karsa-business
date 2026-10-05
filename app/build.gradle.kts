@@ -173,9 +173,8 @@ val verifyReleaseVersion = tasks.register("verifyReleaseVersion") {
         if (currentCode <= previousCode) {
             throw GradleException(
                 "Rilis ditolak: versionCode $currentCode ($currentName) tidak lebih tinggi dari " +
-                    "rilis sebelumnya $previousCode ($previousName). Android akan menolak " +
-                    "instalasi dengan INSTALL_FAILED_VERSION_DOWNGRADE sehingga pengguna harus " +
-                    "uninstall aplikasi lama. Naikkan nomor versi, contoh v1.0.1 -> v1.0.2.",
+                    "rilis sebelumnya $previousCode ($previousName). Gunakan versi baru agar " +
+                    "APK yang sudah diterbitkan tetap dapat ditelusuri. Naikkan nomor versi, contoh v1.0.1 -> v1.0.2.",
             )
         }
     }

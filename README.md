@@ -180,3 +180,5 @@ memerlukan konfigurasi Firebase/API dan signing yang valid. Backend:
 `npm ci`, `npm run check`, dan `TEST_DATABASE_URL=<database-uji> npm test` dari `backend`.
 Database pengujian memakai schema terpisah yang dibuat/dihapus otomatis. Guard rilis:
 `python3 -m unittest discover -s tests` dari root.
+
+Konflik perubahan stok antarperangkat tetap memakai `updatedAt` terbaru. Sertakan perubahan stok bersamaan dalam pengujian dua HP.
