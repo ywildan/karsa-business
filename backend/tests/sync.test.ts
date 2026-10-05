@@ -265,3 +265,47 @@ test("changed applied migration rejected while existing data survives", async ()
   await assert.rejects(applyMigrations(pool), /Applied migration changed/);
   assert.equal((await snapshot("migration")).status, 200);
 });
+
+test("offline stock edits cannot resurrect a deleted catalog product", async () => {
+  const b = business(),
+    p = product(b.id);
+  assert.equal((await sync("deleted-conflict", b, [p])).status, 200);
+  assert.equal(
+    (
+      await sync("deleted-conflict", b, [
+        { ...p, deletedAt: now + 1, updatedAt: now + 1 },
+      ])
+    ).status,
+    200,
+  );
+  const response = await sync(
+    "deleted-conflict",
+    b,
+    [{ ...p, stock: 49, updatedAt: now + 2 }],
+    [transaction(b.id, p.id)],
+  );
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.products[0].deletedAt, now + 1);
+  assert.equal(result.products[0].updatedAt, now + 2);
+  assert.equal(result.transactions.length, 1);
+
+  const second = business(),
+    item = product(second.id);
+  assert.equal(
+    (
+      await sync("delete-after-edit", second, [
+        { ...item, stock: 49, updatedAt: now + 2 },
+      ])
+    ).status,
+    200,
+  );
+  const reverse = await sync("delete-after-edit", second, [
+    { ...item, deletedAt: now + 1, updatedAt: now + 1 },
+  ]);
+  assert.equal(reverse.status, 200);
+  const reverseResult = await reverse.json();
+  assert.equal(reverseResult.products[0].deletedAt, now + 1);
+  assert.equal(reverseResult.products[0].stock, 49);
+  assert.equal(reverseResult.products[0].updatedAt, now + 2);
+});

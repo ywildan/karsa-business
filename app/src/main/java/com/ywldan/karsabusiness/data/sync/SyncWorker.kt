@@ -131,6 +131,10 @@ class SyncWorker(
                         Result.failure()
                     }
                 }
+            } catch (error: com.google.firebase.auth.FirebaseAuthException) {
+                Log.w("KarsaSync", "Authentication unavailable: ${error.javaClass.simpleName}")
+                status.write(ownerId, "failed", "Sesi tidak berlaku. Masuk kembali atau hubungi pengelola untuk melanjutkan sinkronisasi.")
+                Result.failure()
             } catch (error: org.json.JSONException) {
                 Log.w("KarsaSync", "Invalid sync response: ${error.javaClass.simpleName}")
                 status.write(ownerId, "failed", "Respons server tidak sesuai. Data tetap tersimpan di perangkat; coba lagi setelah server diperbaiki.")

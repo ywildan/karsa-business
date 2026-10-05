@@ -422,9 +422,12 @@ async function upsertProduct(
               CASE WHEN $8::bigint IS NULL THEN NULL ELSE to_timestamp($8 / 1000.0) END
          FROM businesses b WHERE b.id = $9 AND b.owner_id = $2
      ON CONFLICT (id) DO UPDATE SET
-       name = EXCLUDED.name, price = EXCLUDED.price, stock = EXCLUDED.stock,
-       updated_at = EXCLUDED.updated_at, deleted_at = EXCLUDED.deleted_at
-     WHERE products.owner_id = $2 AND EXCLUDED.updated_at >= products.updated_at
+       name = CASE WHEN EXCLUDED.updated_at >= products.updated_at THEN EXCLUDED.name ELSE products.name END,
+       price = CASE WHEN EXCLUDED.updated_at >= products.updated_at THEN EXCLUDED.price ELSE products.price END,
+       stock = CASE WHEN EXCLUDED.updated_at >= products.updated_at THEN EXCLUDED.stock ELSE products.stock END,
+       updated_at = GREATEST(products.updated_at, EXCLUDED.updated_at),
+       deleted_at = COALESCE(products.deleted_at, EXCLUDED.deleted_at)
+     WHERE products.owner_id = $2 AND (EXCLUDED.updated_at >= products.updated_at OR EXCLUDED.deleted_at IS NOT NULL)
      RETURNING id`,
     [
       p.id,

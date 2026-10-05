@@ -149,7 +149,7 @@ Detail syarat pembaruan aplikasi danCadangan keystore ada di bagian
 
 Pengiriman dibatasi 400 produk/transaksi per batch, dengan produk dikirim sebelum
 penjualannya. Produk terhapus dikirim sebagai tombstone agar penghapusan menyebar,
-sementara penjualan lama tetap dapat disinkronkan. Usaha yang dibuat offline di
+sementara penjualan lama tetap dapat disinkronkan. Perubahan stok offline tidak menghidupkan kembali produk yang sudah dihapus. Usaha yang dibuat offline di
 perangkat kedua dihubungkan ke ID usaha kanonik milik akun yang sama; hubungan
 produk dan transaksi lokal ikut diperbarui. Perubahan lokal yang lebih baru tetap
 pending ketika respons upload yang lebih lama tiba.
