@@ -35,6 +35,18 @@ jobs:
           gradle-version: "9.4.1"
           cache-provider: basic
 
+      - name: Report configuration status
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          KARSA_API_BASE_URL: ${{ secrets.KARSA_API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_API_KEY:-}" ] || [ -z "${KARSA_API_BASE_URL:-}" ]; then
+            echo "::warning title=Konfigurasi build tidak lengkap::Secret FIREBASE_API_KEY / KARSA_API_BASE_URL tidak tersedia pada job ini. Ini normal untuk pull request dari fork, yang memang tidak punya akses ke repository secrets. Build memakai nilai placeholder CI_PLACEHOLDER_*, jadi APK debug dari artifact tidak boleh dibagikan ke pengguna."
+          else
+            echo "Konfigurasi build debug lengkap."
+          fi
+
       - name: Unit test and build debug APK
         run: gradle --no-daemon testDebugUnitTest assembleDebug
         env:

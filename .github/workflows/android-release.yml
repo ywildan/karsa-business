@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Versi release, contoh v0.1.0"
+        description: "Versi rilis, contoh v1.0.2. Wajib >= versi rilis terakhir."
         required: true
-        default: "v0.1.0"
 
 permissions:
   contents: write
@@ -17,9 +16,25 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # Bentuk tag dicek lebih dulu supaya input manual yang keliru tidak pernah
+      # sampai ke tahap build.
+      - name: Resolve and validate release tag
+        id: tag
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$RELEASE_TAG" | grep -Eq '^v?[0-9]+(\.[0-9]+){0,2}$'; then
+            echo "::error::Tag rilis '$RELEASE_TAG' tidak valid. Gunakan format vMAJOR.MINOR.PATCH, contoh v1.0.2."
+            exit 1
+          fi
+          version="${RELEASE_TAG#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Membangun rilis v$version"
 
       - name: Validate release secrets
         env:
@@ -33,15 +48,25 @@ jobs:
           FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
           API_BASE_URL: ${{ secrets.KARSA_API_BASE_URL }}
         run: |
-          test -n "$KEYSTORE"
-          test -n "$STORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
-          test -n "$FIREBASE_API_KEY"
-          test -n "$FIREBASE_APP_ID"
-          test -n "$FIREBASE_PROJECT_ID"
-          test -n "$FIREBASE_WEB_CLIENT_ID"
-          test -n "$API_BASE_URL"
+          set -euo pipefail
+          for pair in \
+            "KEYSTORE:ANDROID_KEYSTORE_BASE64" \
+            "STORE_PASSWORD:ANDROID_KEYSTORE_PASSWORD" \
+            "KEY_ALIAS:ANDROID_KEY_ALIAS" \
+            "KEY_PASSWORD:ANDROID_KEY_PASSWORD" \
+            "FIREBASE_API_KEY:FIREBASE_API_KEY" \
+            "FIREBASE_APP_ID:FIREBASE_APP_ID" \
+            "FIREBASE_PROJECT_ID:FIREBASE_PROJECT_ID" \
+            "FIREBASE_WEB_CLIENT_ID:FIREBASE_WEB_CLIENT_ID" \
+            "API_BASE_URL:KARSA_API_BASE_URL"; do
+            var="${pair%%:*}"
+            secret_name="${pair##*:}"
+            if [ -z "${!var:-}" ]; then
+              echo "::error::Secret $secret_name belum diisi di repository settings."
+              exit 1
+            fi
+          done
+          echo "Semua secret rilis tersedia."
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -60,13 +85,94 @@ jobs:
           gradle-version: "9.4.1"
           cache-provider: basic
 
-      - name: Restore signing key
+      # Android menolak APK dengan versionCode lebih rendah
+      # (INSTALL_FAILED_VERSION_DOWNGRADE), jadi pengguna harus uninstall
+      # aplikasi lama. Bandingkan nomor versi baru dengan rilis terakhir.
+      - name: Detect previous release version
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest="$(gh release view --json tagName --jq '.tagName' 2>/dev/null || true)"
+          if printf '%s' "$latest" | grep -Eq '^v?[0-9]+(\.[0-9]+){0,2}$'; then
+            echo "version=${latest#v}" >> "$GITHUB_OUTPUT"
+            echo "Rilis terakhir yang terdaftar: $latest"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "Belum ada rilis terdaftar; perbandingan nomor versi dilewati."
+          fi
+
+      - name: Guard release version
+        env:
+          KARSA_VERSION_NAME: ${{ steps.tag.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "${PREVIOUS_VERSION:-}" ]; then
+            args+=("-PpreviousVersionName=$PREVIOUS_VERSION")
+          fi
+          gradle --no-daemon "${args[@]}" verifyReleaseVersion
+
+      # Decode base64 lalu buka keystore dengan keytool, supaya password/alias
+      # yang salah ketahuan di sini - bukan setelah build gagal dengan pesan ambigu.
+      - name: Restore and validate signing key
+        id: keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/karsa-release.jks"
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          KEYSTORE="$RUNNER_TEMP/karsa-release.jks"
+          # Secret bisa mengandung CRLF (mis. dibuat dengan certutil Windows)
+          # yang akan membuat base64 --decode menghasilkan file .jks korup.
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode > "$KEYSTORE"
+          if [ ! -s "$KEYSTORE" ]; then
+            echo "::error::Keystore hasil decode kosong."
+            exit 1
+          fi
+          chmod 600 "$KEYSTORE"
+          if ! keytool -list -v -keystore "$KEYSTORE" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/keystore-info.txt" 2>&1; then
+            echo "::error::keytool gagal membuka keystore. Periksa ANDROID_KEYSTORE_PASSWORD dan ANDROID_KEY_ALIAS."
+            cat "$RUNNER_TEMP/keystore-info.txt"
+            exit 1
+          fi
+          grep -E 'Alias name:|SHA256:' "$RUNNER_TEMP/keystore-info.txt" || true
+          sha256="$(sed -n 's/.*SHA256: *\([0-9A-Fa-f:]*\).*/\1/p' "$RUNNER_TEMP/keystore-info.txt" | head -n1)"
+          if [ -z "$sha256" ]; then
+            echo "::error::Alias '$ANDROID_KEY_ALIAS' tidak ditemukan atau tidak punya fingerprint SHA256."
+            exit 1
+          fi
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+      # Menjaga agar keystore tidak diam-diam diganti. Fingerprint di
+      # release-cert.sha256 adalah bukti key yang menandatangani APK yang sudah
+      # bertebar; menggantinya membuat semua instalasi existing gagal update.
+      - name: Pin signing certificate fingerprint
+        env:
+          KEYSTORE_SHA256: ${{ steps.keystore.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          pinned="$(tr -cd '0-9A-Fa-f' < release-cert.sha256 | tr 'A-F' 'a-f')"
+          actual="$(printf '%s' "$KEYSTORE_SHA256" | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
+          if ! printf '%s' "$pinned" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "::error::release-cert.sha256 belum berisi fingerprint yang valid (butuh 64 karakter heksadesimal)."
+            echo "Isi dengan: keytool -list -v -keystore <file.jks> -alias <alias> | grep SHA256  (tanpa tanda titik dua)"
+            exit 1
+          fi
+          if [ "$pinned" != "$actual" ]; then
+            echo "::error::Sertifikat keystore ($actual) tidak cocok dengan release-cert.sha256 ($pinned)."
+            echo "Rilis dibatalkan. Mengganti keystore membuat aplikasi terpasang gagal update (INSTALL_FAILED_UPDATE_INCOMPATIBLE) dan pengguna harus uninstall."
+            exit 1
+          fi
+          echo "Sertifikat rilis terverifikasi: $actual"
 
       - name: Test and build signed release APK
-        run: gradle --no-daemon testDebugUnitTest assembleRelease
+        run: gradle --no-daemon testDebugUnitTest assembleRelease verifyReleaseConfig
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/karsa-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -77,13 +183,59 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
           KARSA_API_BASE_URL: ${{ secrets.KARSA_API_BASE_URL }}
-          KARSA_VERSION_NAME: ${{ github.event.inputs.version || github.ref_name }}
+          KARSA_VERSION_NAME: ${{ steps.tag.outputs.version }}
+
+      # Bukti bahwa APK benar-benar bertanda tangan dan memakai key yang sama.
+      # APK unsigned akan menghasilkan exit non-nol di apksigner verify.
+      - name: Verify signed APK
+        env:
+          KEYSTORE_SHA256: ${{ steps.keystore.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK" ]; then
+            echo "::error::$APK tidak ada - build release tidak menghasilkan APK bertanda tangan."
+            exit 1
+          fi
+          APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner tidak ditemukan di ANDROID_SDK_ROOT."
+            exit 1
+          fi
+          "$APKSIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-verify.txt"
+          grep -E 'Verified using|Signer #1 certificate (DN|SHA-256 digest)' "$RUNNER_TEMP/apk-verify.txt" || true
+          apk_sha="$(sed -n 's/.*Signer #1 certificate SHA-256 digest: *//p' "$RUNNER_TEMP/apk-verify.txt" | head -n1 | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
+          keystore_sha="$(printf '%s' "$KEYSTORE_SHA256" | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
+          if [ -z "$apk_sha" ]; then
+            echo "::error::Fingerprint SHA-256 APK tidak terbaca."
+            exit 1
+          fi
+          if [ "$apk_sha" != "$keystore_sha" ]; then
+            echo "::error::APK ditandatangani sertifikat ($apk_sha) yang berbeda dari keystore ($keystore_sha)."
+            exit 1
+          fi
+          echo "APK bertanda tangan dan sertifikatnya cocok: $apk_sha"
+          if [ -f app/build/release-guard/version.txt ]; then
+            echo "Versi rilis: $(tr '\n' ' ' < app/build/release-guard/version.txt)"
+          fi
+
+      - name: Archive release evidence
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-signing-evidence
+          path: |
+            release-cert.sha256
+            app/build/release-guard/version.txt
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+          VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk "Karsa-Business-${RELEASE_TAG}.apk"
-          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --generate-notes --title "Karsa Business $RELEASE_TAG"
-          gh release upload "$RELEASE_TAG" "Karsa-Business-${RELEASE_TAG}.apk" --clobber
+          set -euo pipefail
+          TAG="v${VERSION}"
+          cp app/build/outputs/apk/release/app-release.apk "Karsa-Business-${TAG}.apk"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --generate-notes --title "Karsa Business $TAG"
+          gh release upload "$TAG" "Karsa-Business-${TAG}.apk" --clobber
