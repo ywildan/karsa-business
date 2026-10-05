@@ -202,12 +202,32 @@ jobs:
             echo "::error::apksigner tidak ditemukan di ANDROID_SDK_ROOT."
             exit 1
           fi
-          "$APKSIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-verify.txt"
-          grep -E 'Verified using|Signer #1 certificate (DN|SHA-256 digest)' "$RUNNER_TEMP/apk-verify.txt" || true
-          apk_sha="$(sed -n 's/.*Signer #1 certificate SHA-256 digest: *//p' "$RUNNER_TEMP/apk-verify.txt" | head -n1 | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
+          OUT="$RUNNER_TEMP/apk-verify.txt"
+          # Output dikumpulkan dari stdout dan stderr sekaligus, karena informasi
+          # sertifikat tidak selalu ditulis ke stdout.
+          if ! "$APKSIGNER" verify --verbose --print-certs "$APK" > "$OUT" 2>&1; then
+            echo "::error::apksigner verify gagal - APK ditandatangani tidak valid atau rusak."
+            cat "$OUT"
+            exit 1
+          fi
+          echo "----- output lengkap apksigner -----"
+          cat "$OUT"
+          echo "----- akhir output -----"
+
+          # Label yang dipakai apksigner berubah-ubah antar versi build-tools,
+          # jadi yang dicari adalah token heksadesimal 64 karakter, bukan
+          # nama fieldnya. Baris yang menyebut sha-256 diprioritaskan supaya
+          # nomor seri sertifikat tidak ikut terbaca.
+          apk_sha=""
+          if grep -qi 'sha-256' "$OUT"; then
+            apk_sha="$(grep -i 'sha-256' "$OUT" | grep -ioE '[0-9a-f]{2}(:[0-9a-f]{2}){31}|[0-9a-f]{64}' | head -n1 | tr -d ':' | tr 'A-F' 'a-f')"
+          fi
+          if [ -z "$apk_sha" ] && grep -qi 'digest' "$OUT"; then
+            apk_sha="$(grep -i 'digest' "$OUT" | grep -ioE '[0-9a-f]{64}' | head -n1 | tr 'A-F' 'a-f')"
+          fi
           keystore_sha="$(printf '%s' "$KEYSTORE_SHA256" | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
           if [ -z "$apk_sha" ]; then
-            echo "::error::Fingerprint SHA-256 APK tidak terbaca."
+            echo "::error::Fingerprint SHA-256 tidak ditemukan di output apksigner."
             exit 1
           fi
           if [ "$apk_sha" != "$keystore_sha" ]; then
