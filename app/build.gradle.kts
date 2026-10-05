@@ -11,9 +11,9 @@ plugins {
  * request dari fork yang tidak punya akses ke repository secrets. Nilai seperti
  * ini sengaja dibuat berawalan agar [verifyReleaseConfig] bisa menolaknya.
  */
-const val CI_PLACEHOLDER_PREFIX = "CI_PLACEHOLDER_"
+val CI_PLACEHOLDER_PREFIX = "CI_PLACEHOLDER_"
 
-const val DEFAULT_VERSION_NAME = "0.1.0"
+val DEFAULT_VERSION_NAME = "0.1.0"
 
 /** Konfigurasi yang wajib berisi nilai nyata (bukan placeholder) untuk rilis. */
 val REQUIRED_RELEASE_CONFIG = listOf(
