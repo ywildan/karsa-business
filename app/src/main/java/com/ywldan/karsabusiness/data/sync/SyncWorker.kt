@@ -1,6 +1,7 @@
 package com.ywldan.karsabusiness.data.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -19,7 +20,12 @@ import com.ywldan.karsabusiness.data.local.BusinessEntity
 import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.SyncStatus
 import com.ywldan.karsabusiness.data.local.TransactionEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -33,59 +39,114 @@ class SyncWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        if (BuildConfig.API_BASE_URL.isBlank()) return@withContext Result.success()
-        if (FirebaseApp.getApps(applicationContext).isEmpty()) return@withContext Result.success()
-        val firebaseUser = FirebaseAuth.getInstance().currentUser ?: return@withContext Result.success()
-        val token = firebaseUser.getIdToken(false).await().token ?: return@withContext Result.retry()
-        val dao = (applicationContext as KarsaApplication).database.karsaDao()
-        val business = dao.getBusiness(firebaseUser.uid)
-        val pending = dao.getPendingTransactions(firebaseUser.uid)
-        val pendingProducts = dao.getPendingProducts(firebaseUser.uid)
-
-        try {
-            val endpoint = if (business == null) "/v1/snapshot" else "/v1/sync"
-            val connection = (URL(BuildConfig.API_BASE_URL.trimEnd('/') + endpoint)
-                .openConnection() as HttpURLConnection).apply {
-                requestMethod = if (business == null) "GET" else "POST"
-                connectTimeout = 15_000
-                readTimeout = 20_000
-                setRequestProperty("Authorization", "Bearer $token")
-                setRequestProperty("Content-Type", "application/json")
-            }
-            if (business != null) {
-                connection.doOutput = true
-                val payload = JSONObject()
-                    .put("business", business.toJson())
-                    .put("transactions", JSONArray().apply { pending.forEach { put(it.toJson()) } })
-                    .put("products", JSONArray().apply { pendingProducts.forEach { put(it.toJson()) } })
-                connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
-            }
-            if (connection.responseCode !in 200..299) {
-                return@withContext if (connection.responseCode >= 500) Result.retry() else Result.failure()
-            }
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            val response = JSONObject(body)
-            response.optJSONObject("business")?.let {
-                dao.replaceBusiness(it.toBusiness(firebaseUser.uid))
-            }
-            val rows = response.optJSONArray("transactions") ?: JSONArray()
-            val remote = buildList {
-                for (index in 0 until rows.length()) add(rows.getJSONObject(index).toEntity(firebaseUser.uid))
-            }
-            if (remote.isNotEmpty()) dao.syncTransactions(remote)
-            val productRows = response.optJSONArray("products") ?: JSONArray()
-            val remoteProducts = buildList {
-                for (index in 0 until productRows.length()) {
-                    add(productRows.getJSONObject(index).toProduct(firebaseUser.uid))
+        syncMutex.withLock {
+            if (FirebaseApp.getApps(applicationContext).isEmpty()) return@withLock Result.success()
+            val auth = FirebaseAuth.getInstance()
+            val user = auth.currentUser ?: return@withLock Result.success()
+            val ownerId = user.uid
+            val status = SyncStateStore(applicationContext)
+            val dao = (applicationContext as KarsaApplication).database.karsaDao()
+            try {
+                if (BuildConfig.API_BASE_URL.isBlank()) {
+                    status.write(ownerId, "failed", "Sinkronisasi belum dikonfigurasi. Hubungi pengelola aplikasi.")
+                    return@withLock Result.failure()
                 }
+                status.write(ownerId, "running")
+                var token = user.getIdToken(false).await().token ?: error("Token unavailable")
+                suspend fun checkAccount() {
+                    currentCoroutineContext().ensureActive()
+                    if (auth.currentUser?.uid != ownerId) throw CancellationException("Account changed")
+                }
+                suspend fun request(payload: JSONObject?): SyncSnapshot {
+                    checkAccount()
+                    suspend fun send(): JSONObject {
+                        val connection = (URL(BuildConfig.API_BASE_URL.trimEnd('/') +
+                            if (payload == null) "/v1/snapshot" else "/v1/sync").openConnection() as HttpURLConnection).apply {
+                            requestMethod = if (payload == null) "GET" else "POST"
+                            instanceFollowRedirects = false
+                            connectTimeout = 15_000
+                            readTimeout = 20_000
+                            setRequestProperty("Authorization", "Bearer $token")
+                            setRequestProperty("Content-Type", "application/json")
+                        }
+                        try {
+                            if (payload != null) {
+                                connection.doOutput = true
+                                connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+                            }
+                            if (connection.responseCode !in 200..299) throw SyncHttpException(connection.responseCode)
+                            return JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        } finally { connection.disconnect() }
+                    }
+                    val body = try { send() } catch (error: SyncHttpException) {
+                        if (error.status != 401) throw error
+                        token = user.getIdToken(true).await().token ?: throw error
+                        checkAccount()
+                        send()
+                    }
+                    checkAccount()
+                    val rows = body.getJSONArray("transactions")
+                    val products = body.getJSONArray("products")
+                    return SyncSnapshot(
+                        body.optJSONObject("business")?.toBusiness(ownerId),
+                        List(products.length()) { products.getJSONObject(it).toProduct(ownerId) },
+                        List(rows.length()) { rows.getJSONObject(it).toEntity(ownerId) },
+                    )
+                }
+                val store = object : SyncStore {
+                    override suspend fun business() = dao.getBusiness(ownerId)
+                    override suspend fun pendingProducts() = dao.getPendingProducts(ownerId)
+                    override suspend fun pendingTransactions() = dao.getPendingTransactions(ownerId)
+                    override suspend fun apply(snapshot: SyncSnapshot) {
+                        checkAccount()
+                        dao.applySnapshot(snapshot.business, snapshot.products, snapshot.transactions)
+                    }
+                }
+                val remote = object : SyncRemote {
+                    override suspend fun snapshot() = request(null)
+                    override suspend fun upload(business: BusinessEntity, products: List<ProductEntity>, transactions: List<TransactionEntity>) =
+                        request(JSONObject().put("business", business.toJson())
+                            .put("products", JSONArray().apply { products.forEach { put(it.toJson()) } })
+                            .put("transactions", JSONArray().apply { transactions.forEach { put(it.toJson()) } }))
+                }
+                SyncEngine(store, remote).sync()
+                status.write(ownerId, "success")
+                Result.success()
+            } catch (cancelled: CancellationException) {
+                status.write(ownerId, "queued", "Sinkronisasi belum selesai. Data tetap tersimpan di perangkat.")
+                throw cancelled
+            } catch (error: SyncHttpException) {
+                Log.w("KarsaSync", "Sync HTTP ${error.status}")
+                when (httpDisposition(error.status)) {
+                    HttpDisposition.RETRY -> {
+                        status.write(ownerId, "retry", "Server belum dapat dihubungi. Akan dicoba kembali; data tersimpan di perangkat.")
+                        Result.retry()
+                    }
+                    HttpDisposition.AUTH -> {
+                        status.write(ownerId, "failed", "Sesi tidak diterima server. Keluar dan masuk kembali untuk melanjutkan sinkronisasi.")
+                        Result.failure()
+                    }
+                    HttpDisposition.REJECT -> {
+                        status.write(ownerId, "failed", "Data belum dapat disinkronkan. Coba lagi; jika tetap gagal, hubungi pengelola aplikasi.")
+                        Result.failure()
+                    }
+                }
+            } catch (error: org.json.JSONException) {
+                Log.w("KarsaSync", "Invalid sync response: ${error.javaClass.simpleName}")
+                status.write(ownerId, "failed", "Respons server tidak sesuai. Data tetap tersimpan di perangkat; coba lagi setelah server diperbaiki.")
+                Result.failure()
+            } catch (error: Exception) {
+                Log.w("KarsaSync", "Sync interrupted: ${error.javaClass.simpleName}")
+                status.write(ownerId, "retry", "Sinkronisasi tertunda. Periksa koneksi internet; data tetap tersimpan di perangkat.")
+                Result.retry()
             }
-            if (remoteProducts.isNotEmpty()) dao.syncProducts(remoteProducts)
-            Result.success()
-        } catch (_: Exception) {
-            Result.retry()
         }
     }
+
+    companion object { private val syncMutex = Mutex() }
 }
+
+private class SyncHttpException(val status: Int) : Exception("HTTP $status")
 
 object SyncScheduler {
     private val connected = Constraints.Builder()

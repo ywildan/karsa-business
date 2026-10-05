@@ -3,6 +3,9 @@ package com.ywldan.karsabusiness.ui.screens
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,6 +24,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,6 +51,20 @@ private val tabs = listOf(
 fun MainShell(state: MainUiState, model: MainViewModel) {
     Scaffold(
         containerColor = Cream,
+        topBar = {
+            if (state.sync.message.isNotBlank() || state.pendingCount > 0 || state.sync.phase == "running") {
+                Column(Modifier.fillMaxWidth().background(Color.White).statusBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Text(when {
+                        state.sync.phase == "running" -> "Menyinkronkan data…"
+                        state.sync.message.isNotBlank() -> state.sync.message
+                        else -> "${state.pendingCount} perubahan belum tersinkron. Data tersimpan di perangkat."
+                    })
+                    if (state.sync.phase != "running") {
+                        TextButton(onClick = model::syncNow) { Text("Coba sinkronkan") }
+                    }
+                }
+            }
+        },
         bottomBar = {
             NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
                 tabs.forEach { item ->

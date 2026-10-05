@@ -62,7 +62,7 @@ berdampingan dan tidak pernah menimpa APK rilis.
 ### Fingerprint sertifikat
 
 File `release-cert.sha256` di root repository berisi fingerprint SHA-256
-sertifikat signing release (64 karakter heksadesimal tanpa tanda titik dua).
+sertifikat signing release (64 karakter heksadesimal; pemisah titik dua juga diterima).
 Workflow **Android Release** membandingkannya dengan sertifikat yang benar-benar
 dipakai untuk menandatangani APK dan **membatalkan rilis** bila tidak cocok. Ini
 yang mencegah keystore terganti diam-diam: tanpa pemeriksaan tersebut semua
@@ -84,13 +84,15 @@ certificate** agar Google Sign-In tetap berfungsi.
 Sebelum build, workflow menolak rilis yang:
 
 - tag-nya bukan `vMAJOR.MINOR.PATCH`;
-- `versionCode`-nya lebih kecil dari rilis terakhir (mencegah `INSTALL_FAILED_VERSION_DOWNGRADE`);
+- `versionCode`-nya tidak lebih tinggi dari seluruh rilis, termasuk draft/prerelease (mencegah `INSTALL_FAILED_VERSION_DOWNGRADE`);
 - konfigurasi Firebase/API kosong atau berupa placeholder `CI_PLACEHOLDER_*`;
 - keystore gagal dibuka oleh `keytool` memakai password/alias yang diberikan.
 
 Setelah build, `apksigner verify` memastikan APK benar-benar bertanda tangan dan
-sertifikatnya cocok dengan keystore. Rilis dengan nomor versi yang **sama**
-tetap diizinkan, sehingga APK yang gagal dibangun ulang bisa diunggah ulang.
+sertifikatnya cocok dengan keystore. Versi yang sudah diterbitkan tidak boleh ditimpa.
+Setiap pembaruan membutuhkan nomor versi baru. Komponen versi harus 0..999 dan
+formatnya tepat `MAJOR.MINOR.PATCH`. APK disertai `SHA256SUMS`; tag manual menunjuk
+commit yang benar-benar dibangun.
 
 ### Cadangan keystore
 
@@ -114,18 +116,24 @@ Workflow **Deploy Neon Backend** dijalankan manual setelah secrets Neon tersedia
 
 1. menyuntikkan Firebase Project ID publik ke bundle backend;
 2. memeriksa TypeScript;
-3. menerapkan migration PostgreSQL;
-4. menautkan project Neon;
+3. menerapkan seluruh migration PostgreSQL secara berurutan, memakai ledger checksum dan transaksi;
+4. menautkan project Neon secara noninteraktif ke branch yang dipilih;
 5. men-deploy Neon Function.
+
+Secret `DATABASE_URL` harus berasal dari branch Neon yang sama dengan target deploy.
+Atur repository variable `NEON_BRANCH` untuk memilih nama/ID branch secara eksplisit;
+jika kosong, CLI memilih branch default project. Deployment hanya berjalan dari `main`.
+Dependency backend dikunci dengan lockfile dan dipasang melalui `npm ci`.
+Migration lama yang sudah diterapkan tidak boleh diedit; tambahkan berkas migration baru.
 
 Setelah deployment pertama, salin URL Function ke secret `KARSA_API_BASE_URL` lalu jalankan ulang Android CI.
 
 ## Build dan release
 
-- Setiap push/PR ke `main` menjalankan unit test dan menghasilkan artifact APK debug.
+- Setiap push/PR ke `main` menjalankan unit test, membangun APK debug, dan menguji build release dengan R8 serta keystore/config uji. Artifact yang dibagikan CI tetap APK debug.
 - Push tag seperti `v1.0.2` menjalankan test, membuat APK release bertanda tangan, lalu mengunggahnya ke GitHub Releases.
 - Workflow release juga bisa dijalankan manual dari tab Actions. Field versi **wajib diisi** dan harus lebih besar dari rilis terakhir, misalnya `v1.0.2` setelah `v1.0.1`; kolomnya sengaja tidak lagi punya nilai bawaan agar versi lama tidak ikut terpakai.
-- Saat dijalankan manual, nomor versi dibandingkan dengan GitHub Release terakhir, bukan hanya dengan tag di repository.
+- Saat dijalankan manual, nomor versi dibandingkan dengan semua halaman GitHub Releases, termasuk draft/prerelease. Versi sama dan downgrade ditolak.
 
 Detail syarat pembaruan aplikasi danCadangan keystore ada di bagian
 [Penandatanganan rilis](#penandatanganan-rilis-dan-pembaruan-aplikasi).
@@ -136,3 +144,39 @@ Detail syarat pembaruan aplikasi danCadangan keystore ada di bagian
 - Firebase ID token diverifikasi menggunakan JWKS resmi Google.
 - Semua query backend menggunakan parameter SQL.
 - Penghapusan transaksi menggunakan `deleted_at` agar tersinkronkan ke perangkat lain.
+
+## Perbaikan sinkronisasi dan verifikasi
+
+Pengiriman dibatasi 400 produk/transaksi per batch, dengan produk dikirim sebelum
+penjualannya. Produk terhapus dikirim sebagai tombstone agar penghapusan menyebar,
+sementara penjualan lama tetap dapat disinkronkan. Usaha yang dibuat offline di
+perangkat kedua dihubungkan ke ID usaha kanonik milik akun yang sama; hubungan
+produk dan transaksi lokal ikut diperbarui. Perubahan lokal yang lebih baru tetap
+pending ketika respons upload yang lebih lama tiba.
+
+Banner dan halaman Profil menampilkan perubahan pending, kegagalan, serta waktu
+sinkronisasi terakhir berhasil. Gangguan jaringan/server dan HTTP 408/429 dicoba
+ulang; validasi dan respons server yang rusak memerlukan tindakan pengguna.
+HTTP 401 mencoba pembaruan token sekali sebelum meminta pengguna masuk kembali.
+Status kegagalan tidak menyimpan token maupun isi transaksi.
+
+Urutan penerapan: gabungkan perbaikan, deploy backend dari `main`, uji sinkronisasi,
+lalu terbitkan APK dengan versi yang lebih tinggi (berikutnya `v1.0.3` setelah `v1.0.2`).
+Keystore dan konfigurasi Firebase produksi tetap harus sesuai aplikasi terpasang.
+
+Checklist HP:
+
+- Update di atas v1.0.2 tanpa uninstall; usaha, produk, dan riwayat tetap ada.
+- Buat data offline, sambungkan kembali, dan periksa status pending hingga selesai.
+- Uji lebih dari 500 transaksi/produk; putuskan koneksi di tengah sinkronisasi lalu lanjutkan.
+- Pada dua perangkat dengan akun sama, hapus produk di A dan sinkronkan penjualan lama di B.
+- Buat usaha offline di perangkat kedua, lalu sinkronkan; periksa ID usaha, produk, dan transaksi.
+- Edit data ketika sinkronisasi berlangsung; perubahan baru tidak boleh tertimpa respons lama.
+- Coba hapus transaksi dan periksa pengembalian stok serta riwayat.
+- Uji login Google, keluar/masuk akun berbeda, dan tampilan pada tablet/foldable.
+
+Pengujian lokal menggunakan `./gradlew testDebugUnitTest assembleDebug`; build rilis
+memerlukan konfigurasi Firebase/API dan signing yang valid. Backend:
+`npm ci`, `npm run check`, dan `TEST_DATABASE_URL=<database-uji> npm test` dari `backend`.
+Database pengujian memakai schema terpisah yang dibuat/dihapus otomatis. Guard rilis:
+`python3 -m unittest discover -s tests` dari root.

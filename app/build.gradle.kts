@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.net.URI
 
 plugins {
     id("com.android.application")
@@ -59,11 +60,11 @@ fun buildConfigValue(name: String): String {
  */
 fun versionCodeOf(versionName: String): Int {
     val raw = versionName.trim().removePrefix("v").ifBlank { DEFAULT_VERSION_NAME }
-    val numbers = raw.split(".").map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
-    val major = numbers.getOrElse(0) { 0 }.coerceIn(0, 999)
-    val minor = numbers.getOrElse(1) { 0 }.coerceIn(0, 999)
-    val patch = numbers.getOrElse(2) { 0 }.coerceIn(0, 999)
-    return major * 1_000_000 + minor * 1_000 + patch
+    require(Regex("(?:0|[1-9][0-9]{0,2})\\.(?:0|[1-9][0-9]{0,2})\\.(?:0|[1-9][0-9]{0,2})").matches(raw)) {
+        "Versi harus MAJOR.MINOR.PATCH dengan komponen 0..999"
+    }
+    val numbers = raw.split(".").map(String::toInt)
+    return numbers[0] * 1_000_000 + numbers[1] * 1_000 + numbers[2]
 }
 
 fun appVersionName(): String =
@@ -71,6 +72,9 @@ fun appVersionName(): String =
 
 fun appVersionCode(): Int = versionCodeOf(config("KARSA_VERSION_NAME"))
 
+
+fun javaString(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
+    .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
 
 android {
     namespace = "com.ywldan.karsabusiness"
@@ -86,11 +90,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
-        buildConfigField("String", "API_BASE_URL", "\"${buildConfigValue("KARSA_API_BASE_URL")}\"")
-        buildConfigField("String", "FIREBASE_API_KEY", "\"${buildConfigValue("FIREBASE_API_KEY")}\"")
-        buildConfigField("String", "FIREBASE_APP_ID", "\"${buildConfigValue("FIREBASE_APP_ID")}\"")
-        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${buildConfigValue("FIREBASE_PROJECT_ID")}\"")
-        buildConfigField("String", "FIREBASE_WEB_CLIENT_ID", "\"${buildConfigValue("FIREBASE_WEB_CLIENT_ID")}\"")
+        buildConfigField("String", "API_BASE_URL", javaString(buildConfigValue("KARSA_API_BASE_URL")))
+        buildConfigField("String", "FIREBASE_API_KEY", javaString(buildConfigValue("FIREBASE_API_KEY")))
+        buildConfigField("String", "FIREBASE_APP_ID", javaString(buildConfigValue("FIREBASE_APP_ID")))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", javaString(buildConfigValue("FIREBASE_PROJECT_ID")))
+        buildConfigField("String", "FIREBASE_WEB_CLIENT_ID", javaString(buildConfigValue("FIREBASE_WEB_CLIENT_ID")))
     }
 
     signingConfigs {
@@ -165,11 +169,10 @@ val verifyReleaseVersion = tasks.register("verifyReleaseVersion") {
             return@doLast
         }
         val previousCode = versionCodeOf(previousName)
-        // Equal diizinkan agar rilis yang sama bisa dibangun ulang (--clobber),
-        // turun atau ulang akan ditolak.
-        if (currentCode < previousCode) {
+        // Published versions must increase; existing APKs are immutable.
+        if (currentCode <= previousCode) {
             throw GradleException(
-                "Rilis ditolak: versionCode $currentCode ($currentName) lebih rendah dari " +
+                "Rilis ditolak: versionCode $currentCode ($currentName) tidak lebih tinggi dari " +
                     "rilis sebelumnya $previousCode ($previousName). Android akan menolak " +
                     "instalasi dengan INSTALL_FAILED_VERSION_DOWNGRADE sehingga pengguna harus " +
                     "uninstall aplikasi lama. Naikkan nomor versi, contoh v1.0.1 -> v1.0.2.",
@@ -190,6 +193,24 @@ val verifyReleaseConfig = tasks.register("verifyReleaseConfig") {
             .forEach { (name, _) -> problems += "$name tidak tersedia (placeholder CI)." }
         values.filter { (_, value) -> value.isBlank() }
             .forEach { (name, _) -> problems += "$name kosong." }
+        val apiUrl = runCatching { URI(config("KARSA_API_BASE_URL")) }.getOrNull()
+        if (apiUrl == null || apiUrl.scheme != "https" || apiUrl.host.isNullOrBlank() ||
+            apiUrl.rawUserInfo != null || apiUrl.rawQuery != null || apiUrl.rawFragment != null ||
+            apiUrl.port !in -1..65535 || apiUrl.port == 0) {
+            problems += "KARSA_API_BASE_URL harus URL HTTPS tanpa kredensial, query, atau fragment."
+        }
+        if (!Regex("[a-z][a-z0-9-]{4,28}[a-z0-9]").matches(config("FIREBASE_PROJECT_ID"))) {
+            problems += "FIREBASE_PROJECT_ID tidak valid."
+        }
+        if (!Regex("1:[0-9]+:android:[a-fA-F0-9]+").matches(config("FIREBASE_APP_ID"))) {
+            problems += "FIREBASE_APP_ID tidak valid."
+        }
+        if (!config("FIREBASE_WEB_CLIENT_ID").endsWith(".apps.googleusercontent.com")) {
+            problems += "FIREBASE_WEB_CLIENT_ID tidak valid."
+        }
+        if (!Regex("AIza[0-9A-Za-z_-]{35}").matches(config("FIREBASE_API_KEY"))) {
+            problems += "FIREBASE_API_KEY tidak valid."
+        }
         if (keystorePath.isBlank()) {
             problems += "ANDROID_KEYSTORE_PATH kosong, APK release akan dibangun tanpa tanda tangan."
         }

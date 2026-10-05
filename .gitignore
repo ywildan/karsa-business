@@ -10,3 +10,5 @@ local.properties
 !.env.example
 backend/node_modules/
 
+
+__pycache__/

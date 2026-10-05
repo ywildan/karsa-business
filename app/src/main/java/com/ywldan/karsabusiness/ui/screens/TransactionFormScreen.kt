@@ -99,7 +99,9 @@ fun TransactionFormScreen(
     val selectedProduct = products.find { it.id == selectedProductId }
     // Stock already reserved by the transaction being edited counts as available.
     val reservedQty = if (editing?.productId == selectedProduct?.id) (editing?.quantity ?: 1L) else 0L
-    val maxQuantity = (selectedProduct?.stock ?: 0L) + reservedQty
+    val availableStock = (selectedProduct?.stock ?: 0L) + reservedQty
+    // Keep automatically calculated totals within the 12-digit amount field.
+    val maxQuantity = minOf(availableStock, selectedProduct?.price?.takeIf { it > 0 }?.let { 999_999_999_999L / it } ?: availableStock)
     val categories = if (type == TransactionType.INCOME) incomeCategories else expenseCategories
     val accent = if (type == TransactionType.INCOME) Karsa else Coral
 
@@ -221,7 +223,7 @@ fun TransactionFormScreen(
                             onClick = {
                                 if (quantity > 1) {
                                     quantity -= 1
-                                    amountText = formatRupiahInput((product.price * quantity).toString())
+                                    amountText = formatRupiahInput(((java.math.BigInteger.valueOf(product.price) * java.math.BigInteger.valueOf(quantity))).toString())
                                 }
                             },
                             modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
@@ -236,14 +238,14 @@ fun TransactionFormScreen(
                             onClick = {
                                 if (quantity < maxQuantity) {
                                     quantity += 1
-                                    amountText = formatRupiahInput((product.price * quantity).toString())
+                                    amountText = formatRupiahInput(((java.math.BigInteger.valueOf(product.price) * java.math.BigInteger.valueOf(quantity))).toString())
                                 }
                             },
                             modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
                         ) { Icon(Icons.Rounded.Add, "Tambah", tint = Forest) }
                     }
                     Text(
-                        "Stok tersedia: $maxQuantity \u2022 Total: ${rupiah(product.price * quantity)}",
+                        "Stok tersedia: $availableStock \u2022 Total: ${rupiah((java.math.BigInteger.valueOf(product.price) * java.math.BigInteger.valueOf(quantity)))}",
                         color = Muted,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp),

@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseOptions
 import com.ywldan.karsabusiness.data.local.KarsaDatabase
 import com.ywldan.karsabusiness.data.repository.KarsaRepository
 import com.ywldan.karsabusiness.data.sync.SyncScheduler
+import com.ywldan.karsabusiness.data.sync.SyncStateStore
 
 class KarsaApplication : Application() {
     val database by lazy { KarsaDatabase.create(this) }
@@ -13,6 +14,7 @@ class KarsaApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        SyncStateStore(this).recoverInterruptedAttempts()
         configureFirebase()
         SyncScheduler.schedulePeriodic(this)
     }
@@ -33,4 +35,3 @@ class KarsaApplication : Application() {
         }
     }
 }
-

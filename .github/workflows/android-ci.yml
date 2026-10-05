@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "codex/**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -48,13 +48,39 @@ jobs:
           fi
 
       - name: Unit test and build debug APK
-        run: gradle --no-daemon testDebugUnitTest assembleDebug
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
           KARSA_API_BASE_URL: ${{ secrets.KARSA_API_BASE_URL }}
+
+      - name: Build release with test signing and configuration
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/validation.jks
+          ANDROID_KEYSTORE_PASSWORD: validation-password
+          ANDROID_KEY_ALIAS: validation
+          ANDROID_KEY_PASSWORD: validation-password
+          KARSA_API_BASE_URL: https://example.invalid
+          FIREBASE_API_KEY: AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          FIREBASE_APP_ID: 1:123456789:android:abcdef0123456789
+          FIREBASE_PROJECT_ID: karsa-ci-test
+          FIREBASE_WEB_CLIENT_ID: 123456789.apps.googleusercontent.com
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" -keypass "$ANDROID_KEY_PASSWORD" -keyalg RSA -keysize 2048 \
+            -validity 2 -dname "CN=CI validation"
+          ./gradlew --no-daemon assembleRelease verifyReleaseConfig verifyReleaseVersion
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+
+      - name: Test release version guard
+        run: python3 -m unittest discover -s tests
+
+      - name: Remove test keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/validation.jks"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v5

@@ -3,6 +3,10 @@ name: Deploy Neon Backend
 on:
   workflow_dispatch:
 
+concurrency:
+  group: karsa-business-backend-deploy
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -10,6 +14,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: backend
@@ -22,13 +27,32 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Validate deployment inputs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          for name in DATABASE_URL NEON_API_KEY NEON_PROJECT_ID FIREBASE_PROJECT_ID; do
+            test -n "${!name:-}" || { echo "::error::$name is required"; exit 1; }
+          done
+
       - name: Install backend dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Inject public Firebase project ID
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: sed -i "s/__FIREBASE_PROJECT_ID__/$FIREBASE_PROJECT_ID/g" functions/config.ts
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const id = process.env.FIREBASE_PROJECT_ID;
+          if (!id || !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(id)) throw new Error('FIREBASE_PROJECT_ID missing or invalid');
+          fs.writeFileSync('functions/config.ts', `export const firebaseProjectId: string = ${JSON.stringify(id)};\n`);
+          JS
 
       - name: Type check
         run: npm run check
@@ -36,13 +60,21 @@ jobs:
       - name: Apply database migration
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: psql "$DATABASE_URL" --set ON_ERROR_STOP=on --file migrations/001_initial.sql
+        run: npm run migrate
 
       - name: Link and deploy Neon Function
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          NEON_BRANCH: ${{ vars.NEON_BRANCH }}
         run: |
-          npx neon link --project-id "$NEON_PROJECT_ID"
+          set -euo pipefail
+          test -n "$NEON_API_KEY" && test -n "$NEON_PROJECT_ID"
+          if [ -n "$NEON_BRANCH" ]; then
+            npx neon link --project-id "$NEON_PROJECT_ID" --branch "$NEON_BRANCH"
+          else
+            npx neon link -y --project-id "$NEON_PROJECT_ID"
+          fi
+          # Link has been resolved explicitly; deploy the linked branch.
           npx neon deploy
