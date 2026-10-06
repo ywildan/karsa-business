@@ -18,7 +18,7 @@ const button = (label, action, klass = 'text-button') => node('button', { type: 
 function notice(message, error = false) { clearTimeout(toastTimer); $('notice').textContent = message; $('notice').className = error ? 'error' : ''; $('notice').hidden = false; toastTimer = setTimeout(() => $('notice').hidden = true, 5500); }
 function show(section) { for (const id of ['login', 'gate', 'dashboard'])
     $(id).hidden = id !== section; }
-function errorMessage(error) { const messages = { 'auth/invalid-credential': 'Email atau kata sandi belum sesuai.', 'auth/popup-blocked': 'Browser memblokir jendela login Google. Izinkan pop-up untuk situs ini, lalu coba kembali.', 'auth/popup-closed-by-user': 'Jendela login ditutup. Silakan coba lagi.', 'auth/unauthorized-domain': 'Domain dashboard belum didaftarkan di Firebase.', 'auth/network-request-failed': 'Koneksi terputus. Silakan coba lagi.', 'auth/too-many-requests': 'Terlalu banyak percobaan. Tunggu sebentar.', 'auth/user-disabled': 'Akun ini dinonaktifkan.' }; return messages[error.code] || error.message || 'Terjadi kesalahan. Silakan coba lagi.'; }
+function errorMessage(error) { const messages = { 'auth/invalid-credential': 'Email atau kata sandi belum sesuai.', 'auth/unauthorized-domain': 'Domain dashboard belum didaftarkan di Firebase.', 'auth/invalid-auth-event': 'Login Google belum selesai. Coba kembali setelah pengaturan callback diperiksa.', 'auth/web-storage-unsupported': 'Browser belum mengizinkan penyimpanan sesi login untuk situs ini.', 'auth/network-request-failed': 'Koneksi terputus. Silakan coba lagi.', 'auth/too-many-requests': 'Terlalu banyak percobaan. Tunggu sebentar.', 'auth/user-disabled': 'Akun ini dinonaktifkan.' }; return messages[error.code] || error.message || 'Terjadi kesalahan. Silakan coba lagi.'; }
 async function api(path, method = 'GET', payload) {
     const user = auth.currentUser;
     const generation = authGeneration;
@@ -267,6 +267,8 @@ async function initialize() {
         $('gate-message').textContent = 'Memeriksa akses akun…';
         show('gate');
         await load(true); });
+        // Firebase restores the session from the full-page Google callback.
+        await sdk.getRedirectResult(auth);
     }
     catch (error) {
         $('auth-error').textContent = errorMessage(error);
@@ -285,22 +287,17 @@ finally {
 async function signInGoogle() {
     if (!auth || $('google-login').disabled) return;
     $('auth-error').textContent = '';
-    $('popup-help').hidden = true;
     $('google-login').disabled = true;
-    $('google-retry').disabled = true;
+    $('google-login').textContent = 'Membuka Google…';
     try {
-        // Call the SDK directly from the user's click, without a preceding await.
-        await sdk.signInWithPopup(auth, new sdk.GoogleAuthProvider());
+        await sdk.signInWithRedirect(auth, new sdk.GoogleAuthProvider());
     } catch (error) {
         $('auth-error').textContent = errorMessage(error);
-        $('popup-help').hidden = error.code !== 'auth/popup-blocked';
-    } finally {
         $('google-login').disabled = false;
-        $('google-retry').disabled = false;
+        $('google-login').textContent = 'Masuk dengan Google';
     }
 }
 $('google-login').onclick = signInGoogle;
-$('google-retry').onclick = signInGoogle;
 $('reset-password').onclick = async () => { if (!auth)
     return; const email = $('login-form').elements.email.value.trim(); if (!email) {
     $('auth-error').textContent = 'Isi email dahulu untuk mengirim tautan pemulihan.';

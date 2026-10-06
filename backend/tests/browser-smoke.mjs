@@ -12,14 +12,12 @@ async function screenshot(path){const result=await call('Page.captureScreenshot'
 async function click(expression){await evaluate(`${expression}.click()`);}
 try{
  await call('Runtime.enable');await call('Page.enable');await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
- await call('Page.navigate',{url:'http://127.0.0.1:4178/?popupBlocked=1'});await waitFor('document.getElementById("google-login") && !document.getElementById("google-login").disabled');
+ await call('Page.navigate',{url:'http://127.0.0.1:4178/'});await waitFor('document.getElementById("google-login") && !document.getElementById("google-login").disabled');
  await screenshot('build/verification/dashboard-login.png');
- await click('document.getElementById("google-login")');
- await waitFor('!document.getElementById("popup-help").hidden');
- assert.ok((await evaluate('document.getElementById("auth-error").textContent')).includes('Browser memblokir'));
- assert.equal(await evaluate('document.getElementById("google-login").disabled'),false);
- await click('document.getElementById("google-retry")');await waitFor('!document.getElementById("dashboard").hidden');
- assert.equal(await evaluate('document.getElementById("auth-error").textContent'),'');
+ const initialTargets=(await (await fetch('http://127.0.0.1:9337/json/list')).json()).filter(t=>t.type==='page').length;
+ await click('document.getElementById("google-login")');await waitFor('location.pathname === "/test-google"');
+ assert.equal((await (await fetch('http://127.0.0.1:9337/json/list')).json()).filter(t=>t.type==='page').length,initialTargets);
+ await click('document.getElementById("continue-google")');await waitFor('document.getElementById("dashboard") && !document.getElementById("dashboard").hidden');
  assert.equal(await evaluate('document.querySelectorAll(".business-card").length'),2);
  await evaluate('document.getElementById("business-select").selectedIndex=1;document.getElementById("business-select").dispatchEvent(new Event("change"))');
  assert.ok((await evaluate('document.getElementById("page-content").innerText')).includes('Rp 95.000'));
@@ -44,9 +42,10 @@ try{
  await evaluate('fetch("/test-delay-next")');await click('document.getElementById("refresh")');
  await click('document.getElementById("logout")');await waitFor('!document.getElementById("login").hidden');
  await new Promise(r=>setTimeout(r,900));assert.equal(await evaluate('document.getElementById("login").hidden'),false);
- await click('document.getElementById("google-login")');await waitFor('!document.getElementById("dashboard").hidden');
+ await click('document.getElementById("google-login")');await waitFor('location.pathname === "/test-google"');
+ await click('document.getElementById("continue-google")');await waitFor('document.getElementById("dashboard") && !document.getElementById("dashboard").hidden');
  await evaluate('fetch("/test-expire")');await click('document.getElementById("refresh")');await waitFor('!document.getElementById("gate").hidden');assert.equal(await evaluate('document.getElementById("page-content").children.length'),0);
  await click('document.getElementById("gate-logout")');await evaluate('document.getElementById("login-form").elements.email.value="qa-free@students.untidar.ac.id";document.getElementById("login-form").elements.password.value="testing123";document.getElementById("login-form").requestSubmit()');await waitFor('!document.getElementById("gate").hidden');
  assert.equal(await evaluate('document.getElementById("dashboard").hidden'),true);assert.equal(errors.length,0,JSON.stringify(errors));
- console.log('Browser smoke passed: blocked popup guidance and retry, login, business isolation, product CRUD, linked sale, stock refund, business creation, analytics, mobile layout, late response after logout, Premium expiry, free-account gate.');
+ console.log('Browser smoke passed: full-page Google redirect and callback without extra windows, login, business isolation, product CRUD, linked sale, stock refund, business creation, analytics, mobile layout, late response after logout, Premium expiry, free-account gate.');
 }finally{ws.close();}

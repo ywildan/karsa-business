@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Pool } from "pg";
+import { firebaseWebConfig } from "./firebase-auth-proxy.js";
 import { createApi, identityFrom } from "./api-app.js";
 import { firebaseProjectId as injectedProjectId } from "./config.js";
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || injectedProjectId;
@@ -36,6 +37,6 @@ app.get("/web-config", (c) => {
   c.header("Cache-Control", "no-store");
   const apiKey = process.env.FIREBASE_WEB_API_KEY;
   if (!apiKey) return c.json({error:"Dashboard belum dikonfigurasi."},503);
-  return c.json({apiKey,projectId:firebaseProjectId,authDomain:process.env.FIREBASE_AUTH_DOMAIN || `${firebaseProjectId}.firebaseapp.com`});
+  return c.json(firebaseWebConfig(c.req.raw, firebaseProjectId, apiKey));
 });
 export default app;

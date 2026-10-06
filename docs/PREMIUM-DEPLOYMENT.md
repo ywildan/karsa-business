@@ -31,12 +31,13 @@ Jika ini instalasi baru tanpa APK/Neon Function lama, jalankan file SQL `001_ini
 
 Pada Firebase project yang sama dengan aplikasi Android:
 
-1. Tambahkan aplikasi **Web** pada Project settings, lalu ambil Web API key dan authDomain dari konfigurasi Firebase web.
+1. Tambahkan aplikasi **Web** pada Project settings, lalu ambil Web API key dari konfigurasi Firebase web.
 2. Pastikan provider **Email/Password** dan **Google** aktif.
 3. Tambahkan domain Vercel/domain custom dashboard ke **Authentication → Settings → Authorized domains**. Tambahkan domain preview jika dipakai untuk login.
-4. Jika Web API key dibatasi dengan HTTP referrers, izinkan domain dashboard. Gunakan key web; key Android dengan pembatasan package/signing tidak cocok untuk browser.
+4. Di **Google Cloud → Google Auth Platform → Clients**, pilih OAuth client tipe **Web** yang dipakai Firebase Google Sign-In. Tambahkan Authorized redirect URI `https://DOMAIN-DASHBOARD/__/auth/handler`; untuk deployment saat ini: `https://karsa-business-backend.vercel.app/__/auth/handler`. Pertahankan callback yang sudah ada. Client yang tepat dapat dicocokkan dengan Web client ID pada Firebase → Authentication → Google → Web SDK configuration.
+5. Jika Web API key dibatasi dengan HTTP referrers, izinkan domain dashboard. Gunakan key web; key Android dengan pembatasan package/signing tidak cocok untuk browser.
 
-Dashboard memuat Firebase Auth dari CDN resmi Google. Tidak ada pemasangan paket frontend, dan token sesi dikelola Firebase dengan session persistence. Database credentials tidak pernah dikirim ke browser.
+Login Google memakai pengalihan halaman penuh dan memulihkan sesi lewat `getRedirectResult`. Server menentukan `authDomain` dari domain dashboard dan mem-proxy helper Firebase pada `/__/auth/*` agar storage sesi berada pada origin yang sama. Dashboard memuat Firebase Auth dari CDN resmi Google. Tidak ada pemasangan paket frontend, dan token sesi dikelola Firebase dengan session persistence. Database credentials tidak pernah dikirim ke browser.
 
 Referensi: [Firebase Google Sign-In](https://firebase.google.com/docs/auth/web/google-signin), [Firebase via CDN](https://firebase.google.com/docs/web/alt-setup).
 
@@ -60,7 +61,8 @@ Tambahkan environment variables di Vercel:
 | `DATABASE_URL` | Pooled PostgreSQL URL Neon, **database/branch yang sama** dengan backend lama |
 | `FIREBASE_PROJECT_ID` | Firebase project yang dipakai HP |
 | `FIREBASE_WEB_API_KEY` | API key Firebase untuk web |
-| `FIREBASE_AUTH_DOMAIN` | Contoh `project-id.firebaseapp.com`; boleh kosong untuk memakai default tersebut |
+
+Nilai `authDomain` ditentukan otomatis oleh server dari host dashboard; environment variable `FIREBASE_AUTH_DOMAIN` lama tidak diperlukan. Untuk domain custom/preview yang dipakai login, tambahkan domain dan callback OAuth yang sesuai.
 
 Set variables untuk Production; gunakan branch database uji terpisah jika mengaktifkan Preview. Deploy/redeploy setelah environment variables tersedia. Vercel memakai dependency backend yang sudah tercatat pada package-lock; implementasi ini tidak menambahkan paket dependency. Tidak perlu menjalankan install apa pun di laptop.
 
@@ -124,8 +126,12 @@ Pengembangan tidak menjalankan npm/pip/Gradle dependency install atau download l
 
 Konflik perubahan offline tetap mengikuti `updatedAt` terbaru seperti sinkronisasi sebelumnya. Kolaborasi staf/role, pembayaran otomatis, penghapusan bisnis, dan rekonsiliasi konflik stok dua HP yang bersamaan belum ditambahkan.
 
-## Jika login Google menampilkan popup-blocked
+## Login Google melalui redirect
 
-Pesan ini berarti browser menolak jendela Google. Dashboard menampilkan petunjuk dan tombol **Coba login Google lagi**. Pada browser laptop, klik indikator popup diblokir di address bar, izinkan popup khusus untuk domain dashboard, kemudian coba lagi. Handler Google memanggil Firebase langsung dari klik pengguna; izin popup tetap dikendalikan browser.
+Tombol Google membuka halaman Google pada tab yang sama, lalu kembali ke dashboard. Pengaturan OAuth satu kali pada langkah Firebase di atas diperlukan agar Google menerima callback baru. Tidak ada popup atau izin popup browser pada alur ini.
 
-Tidak diperlukan perubahan API key, Premium, atau database untuk error ini. Jangan beralih ke signInWithRedirect tanpa menyiapkan penanganan storage lintas domain sesuai [panduan Firebase](https://firebase.google.com/docs/auth/web/redirect-best-practices).
+Endpoint helper hanya meneruskan file auth Firebase yang diizinkan menuju project Firebase milik aplikasi. Cookie dan Authorization dari dashboard tidak diteruskan ke upstream; respons helper tidak dicache. Header iframe dan CSP helper diatur khusus agar iframe Firebase pada origin yang sama bisa bekerja. Dashboard tetap memakai CSP dan larangan embedding tersendiri.
+
+Jika Google menampilkan `redirect_uri_mismatch`, periksa **Authorized redirect URIs** pada Web client yang benar. URL harus sama persis, termasuk `/__/auth/handler`. Setelah disimpan, refresh dashboard dan coba lagi. Login Firebase sebenarnya sampai selesai tetap perlu diuji oleh pengguna dengan akun sendiri.
+
+Referensi: [Firebase redirect dengan reverse proxy](https://firebase.google.com/docs/auth/web/redirect-best-practices#option-3-proxy-auth-requests-to-firebaseappcom).
