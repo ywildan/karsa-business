@@ -2,6 +2,7 @@ import { rupiah, monthKey, live, summarize, monthlySeries, categories, topProduc
 const $ = id => document.getElementById(id);
 const state = { data: null, selected: 'all', tab: 'overview', search: '', month: monthKey(Date.now()), user: null, loading: false };
 let auth, sdk, saveAction, saving = false, toastTimer;
+let authGeneration = 0;
 const labels = { overview: ['Ringkasan usaha', 'Lihat gambaran besar, lalu tentukan langkah berikutnya.'], transactions: ['Catatan transaksi', 'Semua pergerakan uang, dalam satu tempat.'], products: ['Produk & stok', 'Jaga produk tersedia dan usaha tetap berjalan.'], analytics: ['Analitik usaha', 'Pahami pola usahamu, bukan hanya angkanya.'] };
 function node(tag, attrs = {}, ...children) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) {
     if (k.startsWith('on'))
@@ -20,6 +21,7 @@ function show(section) { for (const id of ['login', 'gate', 'dashboard'])
 function errorMessage(error) { const messages = { 'auth/invalid-credential': 'Email atau kata sandi belum sesuai.', 'auth/popup-closed-by-user': 'Jendela login ditutup. Silakan coba lagi.', 'auth/unauthorized-domain': 'Domain dashboard belum didaftarkan di Firebase.', 'auth/network-request-failed': 'Koneksi terputus. Silakan coba lagi.', 'auth/too-many-requests': 'Terlalu banyak percobaan. Tunggu sebentar.', 'auth/user-disabled': 'Akun ini dinonaktifkan.' }; return messages[error.code] || error.message || 'Terjadi kesalahan. Silakan coba lagi.'; }
 async function api(path, method = 'GET', payload) {
     const user = auth.currentUser;
+    const generation = authGeneration;
     if (!user)
         throw new Error('Masuk kembali untuk melanjutkan.');
     async function send(force = false) { return fetch(path, { method, headers: { Authorization: `Bearer ${await user.getIdToken(force)}`, ...(payload ? { 'Content-Type': 'application/json' } : {}) }, ...(payload ? { body: JSON.stringify(payload) } : {}), cache: 'no-store' }); }
@@ -29,6 +31,8 @@ async function api(path, method = 'GET', payload) {
     if (auth.currentUser?.uid !== user.uid)
         throw new Error('Akun berubah. Silakan masuk kembali.');
     const body = await response.json();
+    if (generation !== authGeneration || auth.currentUser?.uid !== user.uid)
+        throw new Error('Akun berubah. Silakan masuk kembali.');
     if (!response.ok) {
         const error = new Error(body.error || 'Server belum dapat dihubungi.');
         error.code = body.code;
@@ -39,18 +43,22 @@ async function api(path, method = 'GET', payload) {
 }
 function lockDashboard(message) { state.data = null; $('page-content').replaceChildren(); $('gate-message').textContent = message || 'Akunmu belum memiliki Premium aktif. Catatan di HP tetap bisa digunakan.'; show('gate'); }
 async function load(silent = false) {
-    if (state.loading)
+    if (state.loading || !state.user)
         return;
+    const generation = authGeneration;
     state.loading = true;
     $('refresh').disabled = true;
     $('check-premium').disabled = true;
     try {
         const info = await api('/v2/account');
+        if (generation !== authGeneration) return;
         if (!info.account.premium) {
             lockDashboard();
             return;
         }
-        state.data = await api('/v2/web/snapshot');
+        const snapshot = await api('/v2/web/snapshot');
+        if (generation !== authGeneration) return;
+        state.data = snapshot;
         if (state.selected !== 'all' && !state.data.businesses.some(b => b.id === state.selected))
             state.selected = 'all';
         show('dashboard');
@@ -60,6 +68,7 @@ async function load(silent = false) {
             notice('Catatan terbaru sudah dimuat.');
     }
     catch (error) {
+        if (generation !== authGeneration) return;
         if (error.code === 'PREMIUM_REQUIRED')
             lockDashboard(error.message);
         else if (error.status === 401) {
@@ -74,9 +83,11 @@ async function load(silent = false) {
         }
     }
     finally {
-        state.loading = false;
-        $('refresh').disabled = false;
-        $('check-premium').disabled = false;
+        if (generation === authGeneration) {
+            state.loading = false;
+            $('refresh').disabled = false;
+            $('check-premium').disabled = false;
+        }
     }
 }
 function currentBusiness() { return state.data.businesses.find(b => b.id === state.selected); }
@@ -237,7 +248,14 @@ async function initialize() {
         await sdk.setPersistence(auth, sdk.browserSessionPersistence);
         $('google-login').disabled = false;
         $('login-form').querySelector('button').disabled = false;
-        sdk.onAuthStateChanged(auth, async (user) => { state.user = user; if (!user) {
+        sdk.onAuthStateChanged(auth, async (user) => {
+            authGeneration++;
+            state.loading = false;
+            state.user = user;
+            state.data = null;
+            $('page-content').replaceChildren();
+            if ($('editor').open) $('editor').close();
+            if (!user) {
             state.data = null;
             show('login');
             return;
@@ -245,7 +263,10 @@ async function initialize() {
             await sdk.signOut(auth);
             $('auth-error').textContent = 'Gunakan email @students.untidar.ac.id yang sudah diverifikasi.';
             return;
-        } await load(true); });
+        }
+        $('gate-message').textContent = 'Memeriksa akses akun…';
+        show('gate');
+        await load(true); });
     }
     catch (error) {
         $('auth-error').textContent = errorMessage(error);

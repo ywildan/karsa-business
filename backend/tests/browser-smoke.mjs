@@ -36,8 +36,12 @@ try{
  assert.equal(await evaluate('document.getElementById("business-select").options.length'),4);
  await click('document.querySelector("[data-tab=analytics]")');assert.equal(await evaluate('document.querySelectorAll("svg.chart").length'),1);
  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await screenshot('build/verification/dashboard-mobile.png');assert.ok(await evaluate('document.documentElement.scrollWidth<=390'));
+ await evaluate('fetch("/test-delay-next")');await click('document.getElementById("refresh")');
+ await click('document.getElementById("logout")');await waitFor('!document.getElementById("login").hidden');
+ await new Promise(r=>setTimeout(r,900));assert.equal(await evaluate('document.getElementById("login").hidden'),false);
+ await click('document.getElementById("google-login")');await waitFor('!document.getElementById("dashboard").hidden');
  await evaluate('fetch("/test-expire")');await click('document.getElementById("refresh")');await waitFor('!document.getElementById("gate").hidden');assert.equal(await evaluate('document.getElementById("page-content").children.length'),0);
  await click('document.getElementById("gate-logout")');await evaluate('document.getElementById("login-form").elements.email.value="qa-free@students.untidar.ac.id";document.getElementById("login-form").elements.password.value="testing123";document.getElementById("login-form").requestSubmit()');await waitFor('!document.getElementById("gate").hidden');
  assert.equal(await evaluate('document.getElementById("dashboard").hidden'),true);assert.equal(errors.length,0,JSON.stringify(errors));
- console.log('Browser smoke passed: login, business isolation, product CRUD, linked sale, stock refund, business creation, analytics, mobile layout, Premium expiry, free-account gate.');
+ console.log('Browser smoke passed: login, business isolation, product CRUD, linked sale, stock refund, business creation, analytics, mobile layout, late response after logout, Premium expiry, free-account gate.');
 }finally{ws.close();}
