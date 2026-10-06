@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.ywldan.karsabusiness.ui.components.BusinessPicker
+import com.ywldan.karsabusiness.ui.components.ProductInventorySummary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,15 +81,7 @@ fun ProductScreen(state: MainUiState, padding: PaddingValues, model: MainViewMod
         Text("Produk", style = MaterialTheme.typography.headlineMedium)
         BusinessPicker(state.business?.name.orEmpty(), onBusiness, Modifier.padding(top = 6.dp), enabled = !state.busy)
 
-        Row(
-            Modifier.fillMaxWidth().padding(top = 18.dp)
-                .background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            InventoryStat("Jenis produk", state.inventory.totalProducts.toString())
-            InventoryStat("Total stok", state.inventory.totalStock.toString())
-            InventoryStat("Nilai inventaris", rupiah(state.inventory.inventoryValue))
-        }
+        ProductInventorySummary(state.inventory, Modifier.padding(top = 18.dp))
 
         OutlinedTextField(
             value = query,
@@ -149,19 +142,6 @@ fun ProductScreen(state: MainUiState, padding: PaddingValues, model: MainViewMod
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } },
         )
-    }
-}
-
-@Composable
-private fun InventoryStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            value,
-            fontWeight = FontWeight.ExtraBold,
-            style = MaterialTheme.typography.titleMedium,
-            color = Forest,
-        )
-        Text(label, color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
 
