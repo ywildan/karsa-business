@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.ywldan.karsabusiness.ui.components.BusinessPicker
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +45,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun ReportsScreen(state: MainUiState, padding: PaddingValues) {
+fun ReportsScreen(state: MainUiState, padding: PaddingValues, onBusiness: () -> Unit) {
     val now = YearMonth.now()
     val monthly = state.transactions.filter {
         val date = Instant.ofEpochMilli(it.transactionDate).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -70,6 +71,7 @@ fun ReportsScreen(state: MainUiState, padding: PaddingValues) {
     ) {
         item {
             Text("Laporan keuangan", style = MaterialTheme.typography.headlineLarge)
+            BusinessPicker(state.business?.name.orEmpty(), onBusiness, Modifier.padding(top = 6.dp, bottom = 4.dp), enabled = !state.busy)
             Text(now.format(DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale("id", "ID"))), color = Muted)
         }
         item {

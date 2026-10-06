@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Business
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.School
@@ -21,6 +20,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.ywldan.karsabusiness.ui.components.BusinessPicker
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +38,7 @@ import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
 
 @Composable
-fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit, onLogout: () -> Unit) {
+fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit, onLogout: () -> Unit, onBusiness: () -> Unit, onManageBusinesses: () -> Unit) {
     LazyColumn(
         Modifier.fillMaxSize().background(Cream),
         contentPadding = PaddingValues(
@@ -68,14 +69,13 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
         item {
             Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
                 Text("Bisnis aktif", color = Muted, style = MaterialTheme.typography.bodySmall)
-                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Business, null, tint = Forest)
-                    Column(Modifier.padding(start = 12.dp)) {
-                        Text(state.business?.name.orEmpty(), fontWeight = FontWeight.ExtraBold)
-                        Text(state.business?.type.orEmpty(), color = Muted, style = MaterialTheme.typography.bodySmall)
-                    }
+                Column(Modifier.padding(top = 10.dp)) {
+                    BusinessPicker(state.business?.name.orEmpty(), onBusiness, enabled = !state.busy)
+                    Text(state.business?.type.orEmpty(), Modifier.padding(start = 12.dp, top = 4.dp),
+                        color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
                 Text("Paket ${if (state.account.premium) "Premium" else "gratis"} · ${state.businesses.size} dari ${state.account.businessLimit} bisnis", Modifier.padding(top = 14.dp), color = Forest, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = onManageBusinesses, enabled = !state.busy) { Text("Kelola bisnis", color = Forest, fontWeight = FontWeight.Bold) }
             }
         }
         item {

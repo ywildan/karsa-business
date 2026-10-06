@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.ywldan.karsabusiness.ui.components.BusinessPicker
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,7 @@ fun HomeScreen(
     padding: PaddingValues,
     onTab: (MainTab) -> Unit,
     onAdd: (TransactionEntity?) -> Unit,
+    onBusiness: () -> Unit,
 ) {
     val currentMonth = YearMonth.now()
     val monthlyTransactions = state.transactions.filter { transaction ->
@@ -93,7 +95,7 @@ fun HomeScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Halo, ${state.user?.name?.substringBefore(' ') ?: "Kawan"}!", style = MaterialTheme.typography.headlineMedium)
-                    Text(state.business?.name.orEmpty(), color = Muted, style = MaterialTheme.typography.bodyMedium)
+                    BusinessPicker(state.business?.name.orEmpty(), onBusiness, Modifier.padding(top = 6.dp), enabled = !state.busy)
                 }
                 IconButton(onClick = {}) {
                     Icon(Icons.Rounded.NotificationsNone, "Notifikasi", tint = Forest)

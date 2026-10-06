@@ -2,12 +2,9 @@ package com.ywldan.karsabusiness.ui.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -25,11 +22,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.ywldan.karsabusiness.ui.components.BusinessSwitcherSheet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,19 +51,14 @@ private val tabs = listOf(
 
 @Composable
 fun MainShell(state: MainUiState, model: MainViewModel) {
+    var showBusinessSwitcher by rememberSaveable { mutableStateOf(false) }
+    val openBusinessSwitcher = { showBusinessSwitcher = true }
+    val showStatus = state.businessReadOnly || state.sync.message.isNotBlank() ||
+        state.pendingCount > 0 || state.sync.phase == "running"
     Scaffold(
         containerColor = Cream,
         topBar = {
-            Column {
-                Row(
-                    Modifier.fillMaxWidth().background(Color.White).statusBarsPadding().padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = model::openBusinessManager, modifier = Modifier.weight(1f)) {
-                        Text("${state.business?.name.orEmpty()} ▾", fontWeight = FontWeight.Bold, color = Forest, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    Text(if (state.account.premium) "Premium" else "Gratis", Modifier.padding(end = 12.dp), color = Forest)
-                }
+            Column(if (showStatus) Modifier.statusBarsPadding() else Modifier) {
                 if (state.businessReadOnly) {
                     Text("Bisnis ini hanya dapat dibaca", Modifier.fillMaxWidth().background(Lime).padding(12.dp), color = Forest)
                 }
@@ -122,13 +115,22 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
     ) { padding ->
         AnimatedContent(state.selectedTab, label = "main-tab") { tab ->
             when (tab) {
-                MainTab.HOME -> HomeScreen(state, padding, model::selectTab, model::openAdd)
-                MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd)
-                MainTab.PRODUCTS -> ProductScreen(state, padding, model)
-                MainTab.REPORTS -> ReportsScreen(state, padding)
-                MainTab.PROFILE -> ProfileScreen(state, padding, model::syncNow, model::signOut)
+                MainTab.HOME -> HomeScreen(state, padding, model::selectTab, model::openAdd, openBusinessSwitcher)
+                MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd, openBusinessSwitcher)
+                MainTab.PRODUCTS -> ProductScreen(state, padding, model, openBusinessSwitcher)
+                MainTab.REPORTS -> ReportsScreen(state, padding, openBusinessSwitcher)
+                MainTab.PROFILE -> ProfileScreen(state, padding, model::syncNow, model::signOut, openBusinessSwitcher, model::openBusinessManager)
             }
         }
     }
+    if (showBusinessSwitcher) {
+        BusinessSwitcherSheet(
+            state = state,
+            onDismiss = { showBusinessSwitcher = false },
+            onSelect = { id -> model.selectBusiness(id); showBusinessSwitcher = false },
+            onManage = { showBusinessSwitcher = false; model.openBusinessManager() },
+        )
+    }
+
 }
 

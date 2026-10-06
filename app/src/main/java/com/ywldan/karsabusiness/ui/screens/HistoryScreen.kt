@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import com.ywldan.karsabusiness.ui.components.BusinessPicker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +62,7 @@ import kotlin.math.roundToInt
 private enum class HistoryFilter { ALL, INCOME, EXPENSE }
 
 @Composable
-fun HistoryScreen(state: MainUiState, padding: PaddingValues, onEdit: (TransactionEntity?) -> Unit) {
+fun HistoryScreen(state: MainUiState, padding: PaddingValues, onEdit: (TransactionEntity?) -> Unit, onBusiness: () -> Unit) {
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(HistoryFilter.ALL) }
     val visible = state.transactions.filter { tx ->
@@ -83,7 +84,7 @@ fun HistoryScreen(state: MainUiState, padding: PaddingValues, onEdit: (Transacti
     ) {
         item {
             Text("Riwayat transaksi", style = MaterialTheme.typography.headlineLarge)
-            Text("Semua pergerakan uang usahamu.", Modifier.padding(top = 5.dp), color = Muted)
+            BusinessPicker(state.business?.name.orEmpty(), onBusiness, Modifier.padding(top = 6.dp), enabled = !state.busy)
         }
         item {
             OutlinedTextField(

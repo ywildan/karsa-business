@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.ywldan.karsabusiness.ui.components.BusinessPicker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +62,7 @@ import com.ywldan.karsabusiness.ui.theme.Muted
 private val DarkAmber = Color(0xFF8A5A00)
 
 @Composable
-fun ProductScreen(state: MainUiState, padding: PaddingValues, model: MainViewModel) {
+fun ProductScreen(state: MainUiState, padding: PaddingValues, model: MainViewModel, onBusiness: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var stockDialog by remember { mutableStateOf<Pair<ProductEntity, Boolean>?>(null) }
     var deleteTarget by remember { mutableStateOf<ProductEntity?>(null) }
@@ -77,11 +78,7 @@ fun ProductScreen(state: MainUiState, padding: PaddingValues, model: MainViewMod
             .padding(horizontal = 22.dp).padding(top = 28.dp, bottom = 28.dp),
     ) {
         Text("Produk", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "Kelola katalog dan stok barang daganganmu",
-            color = Muted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        BusinessPicker(state.business?.name.orEmpty(), onBusiness, Modifier.padding(top = 6.dp), enabled = !state.busy)
 
         Row(
             Modifier.fillMaxWidth().padding(top = 18.dp)
