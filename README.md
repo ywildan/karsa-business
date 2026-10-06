@@ -132,7 +132,8 @@ Setelah deployment pertama, salin URL Function ke secret `KARSA_API_BASE_URL` la
 
 - Setiap push/PR ke `main` menjalankan unit test, membangun APK debug, dan menguji build release dengan R8 serta keystore/config uji. Artifact yang dibagikan CI tetap APK debug.
 - Push tag seperti `v1.0.2` menjalankan test, membuat APK release bertanda tangan, lalu mengunggahnya ke GitHub Releases.
-- Workflow release juga bisa dijalankan manual dari tab Actions. Field versi **wajib diisi** dan harus lebih besar dari rilis terakhir, misalnya `v1.0.2` setelah `v1.0.1`; kolomnya sengaja tidak lagi punya nilai bawaan agar versi lama tidak ikut terpakai.
+- Untuk publish versi baru otomatis, buka **Actions → Android Release → Run workflow** pada `main`, lalu centang **publish_release**. Workflow memilih versi berikutnya di atas seluruh GitHub Releases (termasuk draft/prerelease) dan tag yang sudah ada, membangun APK bertanda tangan, lalu membuat GitHub Release beserta checksum. Rilis pertama memakai `v0.1.0`; contoh setelah `v1.0.3` akan dipilih `v1.0.4`.
+- Tanpa centang **publish_release**, workflow hanya menjalankan Android CI untuk validasi dan tidak menerbitkan rilis. Tidak ada kolom versi manual; nomor versi selalu dipilih otomatis ketika publish dari Actions. Jika `main` berubah selama build, jalankan kembali workflow dari commit terbaru.
 - Saat dijalankan manual, nomor versi dibandingkan dengan semua halaman GitHub Releases, termasuk draft/prerelease. Versi sama dan downgrade ditolak.
 
 Detail syarat pembaruan aplikasi danCadangan keystore ada di bagian
