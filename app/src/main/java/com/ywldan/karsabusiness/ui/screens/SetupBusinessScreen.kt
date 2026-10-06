@@ -25,13 +25,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.ywldan.karsabusiness.ui.components.PrimaryButton
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Muted
 
@@ -46,12 +47,12 @@ fun SetupBusinessScreen(busy: Boolean, onCreate: (String, String, Long) -> Unit)
         Modifier.fillMaxSize().background(Cream).verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp).padding(top = 52.dp, bottom = 28.dp),
     ) {
-        Text("LANGKAH 2 DARI 3", color = Forest, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.bodySmall)
+        Text("LANGKAH 2 DARI 3", color = Ink, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.bodySmall)
         LinearProgressIndicator(
             progress = { .66f },
             Modifier.fillMaxWidth().padding(top = 10.dp).height(7.dp),
-            color = Forest,
-            trackColor = Forest.copy(alpha = .12f),
+            color = Ink,
+            trackColor = Ink.copy(alpha = .12f),
         )
         Text("Ceritakan sedikit tentang usahamu.", Modifier.padding(top = 30.dp), style = MaterialTheme.typography.headlineLarge)
         Text("Informasi ini dipakai untuk menyiapkan pencatatan pertama.", Modifier.padding(top = 8.dp), color = Muted)
@@ -69,9 +70,9 @@ fun SetupBusinessScreen(busy: Boolean, onCreate: (String, String, Long) -> Unit)
             businessTypes.forEach { item ->
                 Text(
                     item,
-                    Modifier.background(if (type == item) Forest else Color.White, RoundedCornerShape(14.dp))
+                    Modifier.background(if (type == item) Forest else Card, RoundedCornerShape(14.dp))
                         .clickable { type = item }.padding(horizontal = 15.dp, vertical = 11.dp),
-                    color = if (type == item) Lime else Forest,
+                    color = if (type == item) Lime else Ink,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall,
                 )

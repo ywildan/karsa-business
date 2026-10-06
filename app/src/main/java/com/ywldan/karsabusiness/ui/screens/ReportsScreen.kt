@@ -31,6 +31,7 @@ import com.ywldan.karsabusiness.data.local.TransactionType
 import com.ywldan.karsabusiness.ui.MainUiState
 import com.ywldan.karsabusiness.ui.components.rupiah
 import com.ywldan.karsabusiness.ui.theme.Amber
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
@@ -38,6 +39,7 @@ import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnMint
 import java.time.Instant
 import java.time.ZoneId
 import java.time.YearMonth
@@ -85,7 +87,7 @@ fun ReportsScreen(state: MainUiState, padding: PaddingValues) {
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
+            Column(Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(18.dp)) {
                 Text("Perbandingan bulan ini", fontWeight = FontWeight.ExtraBold)
                 Row(Modifier.fillMaxWidth().height(180.dp).padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
                     ReportBar("Masuk", income, maxOf(income, expense, 1), Karsa)
@@ -95,13 +97,13 @@ fun ReportsScreen(state: MainUiState, padding: PaddingValues) {
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
+            Column(Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(18.dp)) {
                 Text("Komposisi pengeluaran", fontWeight = FontWeight.ExtraBold)
                 if (expensesByCategory.isEmpty()) {
                     Text("Belum ada pengeluaran bulan ini.", Modifier.padding(top = 12.dp), color = Muted)
                 } else {
                     expensesByCategory.forEachIndexed { index, entry ->
-                        val colors = listOf(Coral, Amber, Karsa, Forest, Lime)
+                        val colors = listOf(Coral, Amber, Karsa, OnMint, Lime)
                         Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(10.dp).background(colors[index], CircleShape))
                             Text(entry.key, Modifier.weight(1f).padding(start = 10.dp), color = Muted)
@@ -113,7 +115,7 @@ fun ReportsScreen(state: MainUiState, padding: PaddingValues) {
         }
         item {
             Column(Modifier.fillMaxWidth().background(Mint, RoundedCornerShape(24.dp)).padding(18.dp)) {
-                Text("Insight sederhana", color = Forest, fontWeight = FontWeight.ExtraBold)
+                Text("Insight sederhana", color = OnMint, fontWeight = FontWeight.ExtraBold)
                 Text(
                     when {
                         monthly.isEmpty() -> "Mulai catat transaksi agar Karsa bisa membaca kondisi usahamu."
@@ -121,7 +123,7 @@ fun ReportsScreen(state: MainUiState, padding: PaddingValues) {
                         else -> "Pengeluaran masih menyamai atau melebihi pemasukan. Periksa kategori biaya terbesar."
                     },
                     Modifier.padding(top = 6.dp),
-                    color = Forest.copy(alpha = .75f),
+                    color = OnMint.copy(alpha = .8f),
                 )
             }
         }

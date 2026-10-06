@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import com.ywldan.karsabusiness.BuildConfig
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -42,17 +41,17 @@ fun BusinessManagerScreen(state: MainUiState, onClose: () -> Unit, onSelect: (St
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Tutup") }
             Text("Bisnis usahamu", style = MaterialTheme.typography.headlineMedium)
         }
-        Text("${if (state.account.premium) "Premium" else "Gratis"} · ${state.businesses.size} dari ${state.account.businessLimit} bisnis", color = Forest, fontWeight = FontWeight.Bold)
+        Text("${if (state.account.premium) "Premium" else "Gratis"} · ${state.businesses.size} dari ${state.account.businessLimit} bisnis", color = Ink, fontWeight = FontWeight.Bold)
         Text("Transaksi, produk, dan stok setiap bisnis dicatat terpisah.", color = Muted)
         state.businesses.forEach { business ->
-            Column(Modifier.fillMaxWidth().background(if (business.id == state.business?.id) Lime else Color.White, RoundedCornerShape(20.dp))
+            Column(Modifier.fillMaxWidth().background(if (business.id == state.business?.id) Lime else Card, RoundedCornerShape(20.dp))
                 .clickable(enabled = !state.busy) { onSelect(business.id) }.padding(18.dp)) {
-                Text(business.name, fontWeight = FontWeight.ExtraBold, color = Forest)
+                Text(business.name, fontWeight = FontWeight.ExtraBold, color = if (business.id == state.business?.id) Forest else Ink)
                 Text("${business.type}${if (business.id == state.business?.id) " · Dipilih" else ""}", color = Muted)
             }
         }
         if (state.businessReadOnly) {
-            Text("Premium sudah tidak aktif. Data tetap tersimpan; bisnis ini hanya dapat dibaca.", color = Forest)
+            Text("Premium sudah tidak aktif. Data tetap tersimpan; bisnis ini hanya dapat dibaca.", color = Ink)
             PrimaryButton("Jadikan bisnis gratis aktif", onChooseFree, busy = state.busy)
         }
         if (state.account.premium) {

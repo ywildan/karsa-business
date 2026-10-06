@@ -58,9 +58,11 @@ import com.ywldan.karsabusiness.ui.components.PrimaryButton
 import com.ywldan.karsabusiness.ui.components.formatRupiahInput
 import com.ywldan.karsabusiness.ui.components.rupiah
 import com.ywldan.karsabusiness.ui.theme.Blush
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
@@ -111,7 +113,7 @@ fun TransactionFormScreen(
                 .padding(horizontal = 22.dp).padding(top = 40.dp, bottom = 28.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose, modifier = Modifier.background(Color.White, CircleShape)) {
+                IconButton(onClick = onClose, modifier = Modifier.background(Card, CircleShape)) {
                     Icon(Icons.Rounded.Close, "Tutup")
                 }
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -125,7 +127,7 @@ fun TransactionFormScreen(
                 }
             }
 
-            Row(Modifier.fillMaxWidth().padding(top = 24.dp).background(Color.White, RoundedCornerShape(18.dp)).padding(4.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = 24.dp).background(Card, RoundedCornerShape(18.dp)).padding(4.dp)) {
                 TypeOption("Pemasukan", type == TransactionType.INCOME, Karsa, Modifier.weight(1f)) {
                     type = TransactionType.INCOME
                     if (category !in incomeCategories) category = incomeCategories.first()
@@ -143,7 +145,7 @@ fun TransactionFormScreen(
                 onValueChange = { amountText = formatRupiahInput(it.filter(Char::isDigit).take(12)) },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 prefix = { Text("Rp ", color = accent, fontWeight = FontWeight.ExtraBold) },
-                textStyle = MaterialTheme.typography.headlineMedium.copy(color = Forest),
+                textStyle = MaterialTheme.typography.headlineMedium.copy(color = Ink),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 shape = RoundedCornerShape(18.dp),
@@ -152,7 +154,7 @@ fun TransactionFormScreen(
                 listOf(10_000L, 25_000L, 50_000L, 100_000L).forEach { quick ->
                     Text(
                         "+${rupiah(quick)}",
-                        Modifier.background(Color.White, RoundedCornerShape(100.dp)).clickable {
+                        Modifier.background(Card, RoundedCornerShape(100.dp)).clickable {
                             amountText = formatRupiahInput(((amountText.filter(Char::isDigit).toLongOrNull() ?: 0) + quick).toString())
                         }.padding(horizontal = 12.dp, vertical = 8.dp),
                         color = accent,
@@ -226,8 +228,8 @@ fun TransactionFormScreen(
                                     amountText = formatRupiahInput(((java.math.BigInteger.valueOf(product.price) * java.math.BigInteger.valueOf(quantity))).toString())
                                 }
                             },
-                            modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
-                        ) { Icon(Icons.Rounded.Remove, "Kurangi", tint = Forest) }
+                            modifier = Modifier.background(Card, CircleShape).size(36.dp),
+                        ) { Icon(Icons.Rounded.Remove, "Kurangi", tint = Ink) }
                         Text(
                             quantity.toString(),
                             Modifier.padding(horizontal = 10.dp),
@@ -241,8 +243,8 @@ fun TransactionFormScreen(
                                     amountText = formatRupiahInput(((java.math.BigInteger.valueOf(product.price) * java.math.BigInteger.valueOf(quantity))).toString())
                                 }
                             },
-                            modifier = Modifier.background(Color.White, CircleShape).size(36.dp),
-                        ) { Icon(Icons.Rounded.Add, "Tambah", tint = Forest) }
+                            modifier = Modifier.background(Card, CircleShape).size(36.dp),
+                        ) { Icon(Icons.Rounded.Add, "Tambah", tint = Ink) }
                     }
                     Text(
                         "Stok tersedia: $availableStock \u2022 Total: ${rupiah((java.math.BigInteger.valueOf(product.price) * java.math.BigInteger.valueOf(quantity)))}",
@@ -266,9 +268,9 @@ fun TransactionFormScreen(
             Text("Tanggal", Modifier.padding(top = 24.dp, bottom = 8.dp), fontWeight = FontWeight.ExtraBold)
             Text(
                 formatDate(date),
-                Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).clickable { showDatePicker = true }
+                Modifier.fillMaxWidth().background(Card, RoundedCornerShape(18.dp)).clickable { showDatePicker = true }
                     .padding(16.dp),
-                color = Forest,
+                color = Ink,
                 fontWeight = FontWeight.Bold,
             )
             OutlinedTextField(
@@ -354,7 +356,7 @@ private fun TypeOption(label: String, selected: Boolean, color: Color, modifier:
 private fun ChoiceChip(label: String, selected: Boolean, color: Color, onClick: () -> Unit) {
     Text(
         label,
-        Modifier.background(if (selected) color else Color.White, RoundedCornerShape(100.dp))
+        Modifier.background(if (selected) color else Card, RoundedCornerShape(100.dp))
             .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
         color = if (selected) Color.White else Muted,
         fontWeight = FontWeight.Bold,

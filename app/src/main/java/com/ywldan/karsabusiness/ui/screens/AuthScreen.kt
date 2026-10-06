@@ -40,8 +40,10 @@ import androidx.compose.ui.unit.dp
 import com.ywldan.karsabusiness.BuildConfig
 import com.ywldan.karsabusiness.ui.components.KarsaLogo
 import com.ywldan.karsabusiness.ui.components.PrimaryButton
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Muted
 
@@ -73,7 +75,7 @@ fun AuthScreen(
         )
 
         Row(
-            Modifier.fillMaxWidth().padding(top = 28.dp).background(Color.White, RoundedCornerShape(16.dp)).padding(4.dp),
+            Modifier.fillMaxWidth().padding(top = 28.dp).background(Card, RoundedCornerShape(16.dp)).padding(4.dp),
         ) {
             AuthTab("Masuk", !isRegister, Modifier.weight(1f)) { isRegister = false }
             AuthTab("Daftar", isRegister, Modifier.weight(1f)) { isRegister = true }
@@ -132,7 +134,7 @@ fun AuthScreen(
             Box(Modifier.size(24.dp).background(Lime, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                 Text("G", color = Forest, fontWeight = FontWeight.ExtraBold)
             }
-            Text("Lanjutkan dengan Google", Modifier.padding(start = 10.dp), color = Forest, fontWeight = FontWeight.Bold)
+            Text("Lanjutkan dengan Google", Modifier.padding(start = 10.dp), color = Ink, fontWeight = FontWeight.Bold)
         }
 
         if (!firebaseConfigured) {

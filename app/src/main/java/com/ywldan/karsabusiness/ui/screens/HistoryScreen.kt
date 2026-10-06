@@ -47,12 +47,16 @@ import com.ywldan.karsabusiness.ui.MainUiState
 import com.ywldan.karsabusiness.ui.components.EmptyState
 import com.ywldan.karsabusiness.ui.components.rupiah
 import com.ywldan.karsabusiness.ui.theme.Blush
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnBlush
+import com.ywldan.karsabusiness.ui.theme.OnMint
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -107,7 +111,7 @@ fun HistoryScreen(state: MainUiState, padding: PaddingValues, onEdit: (Transacti
             item { EmptyState("Transaksi tidak ditemukan", "Ubah pencarian atau catat transaksi baru.") }
         } else {
             grouped.forEach { (day, transactions) ->
-                item { Text(day, Modifier.padding(top = 8.dp), fontWeight = FontWeight.ExtraBold, color = Forest) }
+                item { Text(day, Modifier.padding(top = 8.dp), fontWeight = FontWeight.ExtraBold, color = Ink) }
                 items(transactions, key = { it.id }) { transaction ->
                     TransactionRow(transaction) { onEdit(transaction) }
                 }
@@ -120,7 +124,7 @@ fun HistoryScreen(state: MainUiState, padding: PaddingValues, onEdit: (Transacti
 private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         label,
-        Modifier.background(if (selected) Forest else Color.White, RoundedCornerShape(100.dp))
+        Modifier.background(if (selected) Forest else Card, RoundedCornerShape(100.dp))
             .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
         color = if (selected) Color.White else Muted,
         style = MaterialTheme.typography.bodySmall,
@@ -146,7 +150,7 @@ private fun HistorySummary(income: Long, expense: Long, profit: Long, count: Int
     val positive = profit >= 0L
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Ringkasan", color = Forest, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("Ringkasan", color = Ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.weight(1f))
             Text("$count transaksi", color = Muted, fontSize = 12.sp)
         }
@@ -154,13 +158,13 @@ private fun HistorySummary(income: Long, expense: Long, profit: Long, count: Int
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             if (maxWidth < 300.dp || LocalDensity.current.fontScale > 1.2f) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SummaryTile("Masuk", income, Icons.Rounded.ArrowDownward, Forest, Mint, Modifier.fillMaxWidth())
-                    SummaryTile("Keluar", expense, Icons.Rounded.ArrowUpward, Coral, Blush, Modifier.fillMaxWidth())
+                    SummaryTile("Masuk", income, Icons.Rounded.ArrowDownward, OnMint, Mint, Modifier.fillMaxWidth())
+                    SummaryTile("Keluar", expense, Icons.Rounded.ArrowUpward, OnBlush, Blush, Modifier.fillMaxWidth())
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SummaryTile("Masuk", income, Icons.Rounded.ArrowDownward, Forest, Mint, Modifier.weight(1f))
-                    SummaryTile("Keluar", expense, Icons.Rounded.ArrowUpward, Coral, Blush, Modifier.weight(1f))
+                    SummaryTile("Masuk", income, Icons.Rounded.ArrowDownward, OnMint, Mint, Modifier.weight(1f))
+                    SummaryTile("Keluar", expense, Icons.Rounded.ArrowUpward, OnBlush, Blush, Modifier.weight(1f))
                 }
             }
         }
@@ -170,15 +174,15 @@ private fun HistorySummary(income: Long, expense: Long, profit: Long, count: Int
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SummaryIcon(
                     if (positive) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
-                    if (positive) Forest else Coral,
+                    if (positive) Forest else OnBlush,
                     Color.White.copy(alpha = .6f),
                 )
-                Text("Laba", color = Forest, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Laba", color = if (positive) Forest else OnBlush, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
             Text(
                 rupiah(profit),
                 Modifier.padding(top = 12.dp),
-                color = Forest,
+                color = if (positive) Forest else OnBlush,
                 fontSize = 34.sp,
                 lineHeight = 40.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -191,7 +195,7 @@ private fun HistorySummary(income: Long, expense: Long, profit: Long, count: Int
                     else -> "Pengeluaran ${(expense * 100.0 / income).roundToInt()}% dari pemasukan"
                 },
                 Modifier.padding(top = 6.dp),
-                color = Forest.copy(alpha = .8f),
+                color = (if (positive) Forest else OnBlush).copy(alpha = .8f),
                 fontSize = 12.sp,
                 lineHeight = 18.sp,
             )
@@ -208,7 +212,7 @@ private fun SummaryIcon(icon: ImageVector, tint: Color, background: Color) {
 
 @Composable
 private fun SummaryTile(label: String, amount: Long, icon: ImageVector, tint: Color, background: Color, modifier: Modifier) {
-    Column(modifier.background(Color.White, RoundedCornerShape(22.dp)).padding(16.dp)) {
+    Column(modifier.background(Card, RoundedCornerShape(22.dp)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SummaryIcon(icon, tint, background)
             Text(label, color = Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)

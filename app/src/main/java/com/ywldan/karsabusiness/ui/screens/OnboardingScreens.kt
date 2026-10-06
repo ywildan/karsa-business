@@ -39,7 +39,7 @@ import com.ywldan.karsabusiness.ui.components.PrimaryButton
 import com.ywldan.karsabusiness.ui.theme.Amber
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Cream
-import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
@@ -53,29 +53,29 @@ private data class OnboardingPage(
     val accent: Color,
 )
 
-private val pages = listOf(
-    OnboardingPage(
-        Icons.Rounded.AccountBalanceWallet,
-        "Uang usaha, jangan dicampur lagi.",
-        "Pisahkan kas bisnis dari uang jajan supaya kamu tahu usaha benar-benar tumbuh.",
-        Lime,
-    ),
-    OnboardingPage(
-        Icons.Rounded.Bolt,
-        "Catat transaksi secepat pesan kopi.",
-        "Nominal, kategori, simpan. Transaksi harian masuk hanya dalam beberapa ketukan.",
-        Amber,
-    ),
-    OnboardingPage(
-        Icons.Rounded.Insights,
-        "Laba terlihat tanpa hitung manual.",
-        "Karsa merangkum pemasukan, pengeluaran, saldo, dan performa usahamu.",
-        Mint,
-    ),
-)
-
 @Composable
 fun OnboardingScreen(onFinished: () -> Unit) {
+    // Dibuat di dalam composable karena aksen warna kini mengikuti mode tampilan.
+    val pages = listOf(
+        OnboardingPage(
+            Icons.Rounded.AccountBalanceWallet,
+            "Uang usaha, jangan dicampur lagi.",
+            "Pisahkan kas bisnis dari uang jajan supaya kamu tahu usaha benar-benar tumbuh.",
+            Lime,
+        ),
+        OnboardingPage(
+            Icons.Rounded.Bolt,
+            "Catat transaksi secepat pesan kopi.",
+            "Nominal, kategori, simpan. Transaksi harian masuk hanya dalam beberapa ketukan.",
+            Amber,
+        ),
+        OnboardingPage(
+            Icons.Rounded.Insights,
+            "Laba terlihat tanpa hitung manual.",
+            "Karsa merangkum pemasukan, pengeluaran, saldo, dan performa usahamu.",
+            Mint,
+        ),
+    )
     val pager = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
     Column(
@@ -96,7 +96,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                 Box(
                     Modifier.padding(horizontal = 4.dp)
                         .size(if (pager.currentPage == index) 24.dp else 8.dp, 8.dp)
-                        .background(if (pager.currentPage == index) Forest else Forest.copy(alpha = .18f), CircleShape),
+                        .background(if (pager.currentPage == index) Ink else Ink.copy(alpha = .18f), CircleShape),
                 )
             }
         }
@@ -126,14 +126,14 @@ private fun OnboardingPageContent(page: OnboardingPage) {
                 drawCircle(Coral.copy(alpha = .8f), 8.dp.toPx(), Offset(size.width * .17f, size.height * .2f))
                 drawCircle(Karsa.copy(alpha = .8f), 6.dp.toPx(), Offset(size.width * .83f, size.height * .77f))
             }
-            Icon(page.icon, null, Modifier.size(112.dp), tint = Forest)
+            Icon(page.icon, null, Modifier.size(112.dp), tint = Ink)
         }
         Spacer(Modifier.height(34.dp))
         Text(
             page.title,
             style = MaterialTheme.typography.headlineLarge,
             textAlign = TextAlign.Center,
-            color = Forest,
+            color = Ink,
         )
         Spacer(Modifier.height(12.dp))
         Text(

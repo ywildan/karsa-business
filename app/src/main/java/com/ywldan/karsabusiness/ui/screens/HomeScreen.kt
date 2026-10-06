@@ -42,12 +42,15 @@ import com.ywldan.karsabusiness.ui.components.EmptyState
 import com.ywldan.karsabusiness.ui.components.SectionHeader
 import com.ywldan.karsabusiness.ui.components.rupiah
 import com.ywldan.karsabusiness.ui.theme.Blush
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnMint
 import java.time.Instant
 import java.time.ZoneId
 import java.time.YearMonth
@@ -95,7 +98,7 @@ fun HomeScreen(
                     Text("Halo, ${state.user?.name?.substringBefore(' ') ?: "Kawan"}!", style = MaterialTheme.typography.headlineMedium)
                 }
                 IconButton(onClick = {}) {
-                    Icon(Icons.Rounded.NotificationsNone, "Notifikasi", tint = Forest)
+                    Icon(Icons.Rounded.NotificationsNone, "Notifikasi", tint = Ink)
                 }
             }
         }
@@ -118,7 +121,7 @@ fun HomeScreen(
                     Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp)
-                        .background(Color.White, RoundedCornerShape(24.dp))
+                        .background(Card, RoundedCornerShape(24.dp))
                         .clickable { onTab(MainTab.REPORTS) }
                         .padding(18.dp),
                 ) {
@@ -127,7 +130,7 @@ fun HomeScreen(
                             Modifier.size(44.dp).background(Mint, RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Rounded.Insights, null, tint = Forest)
+                            Icon(Icons.Rounded.Insights, null, tint = OnMint)
                         }
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text("Laba bersih", color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -138,7 +141,7 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.titleLarge,
                             )
                         }
-                        Icon(Icons.Rounded.ChevronRight, "Buka laporan", tint = Forest)
+                        Icon(Icons.Rounded.ChevronRight, "Buka laporan", tint = Ink)
                     }
                     Row(
                         Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -172,7 +175,7 @@ fun HomeScreen(
                     Text("Catatan usaha makin rapi", fontWeight = FontWeight.Bold)
                     Text("Terus catat setiap transaksi hari ini.", color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = Forest)
+                Icon(Icons.Rounded.ChevronRight, null, tint = OnMint)
             }
         }
         item { SectionHeader("Transaksi terbaru", "Lihat semua") { onTab(MainTab.HISTORY) } }
@@ -205,7 +208,7 @@ private fun InsightMetric(label: String, value: String, modifier: Modifier) {
         modifier.background(Mint.copy(alpha = .55f), RoundedCornerShape(16.dp)).padding(12.dp),
     ) {
         Text(label, color = Muted, style = MaterialTheme.typography.bodySmall)
-        Text(value, Modifier.padding(top = 2.dp), color = Forest, fontWeight = FontWeight.ExtraBold)
+        Text(value, Modifier.padding(top = 2.dp), color = OnMint, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -213,7 +216,7 @@ private fun InsightMetric(label: String, value: String, modifier: Modifier) {
 fun TransactionRow(transaction: TransactionEntity, onClick: () -> Unit) {
     val income = transaction.type == TransactionType.INCOME
     Row(
-        Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(14.dp),
+        Modifier.fillMaxWidth().background(Card, RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

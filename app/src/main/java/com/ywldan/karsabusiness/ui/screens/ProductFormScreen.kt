@@ -39,8 +39,9 @@ import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.ui.components.PrimaryButton
 import com.ywldan.karsabusiness.ui.components.formatRupiahInput
 import com.ywldan.karsabusiness.ui.theme.Coral
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
-import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Muted
 
 @Composable
@@ -61,7 +62,7 @@ fun ProductFormScreen(
             .navigationBarsPadding().padding(horizontal = 22.dp).padding(top = 40.dp, bottom = 28.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose, modifier = Modifier.background(Color.White, CircleShape)) {
+            IconButton(onClick = onClose, modifier = Modifier.background(Card, CircleShape)) {
                 Icon(Icons.Rounded.Close, "Tutup")
             }
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -109,7 +110,7 @@ fun ProductFormScreen(
             value = priceText,
             onValueChange = { priceText = formatRupiahInput(it.filter(Char::isDigit).take(12)) },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            prefix = { Text("Rp ", color = Forest, fontWeight = FontWeight.ExtraBold) },
+            prefix = { Text("Rp ", color = Ink, fontWeight = FontWeight.ExtraBold) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             shape = RoundedCornerShape(18.dp),
