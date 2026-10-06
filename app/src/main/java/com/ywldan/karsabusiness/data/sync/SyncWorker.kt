@@ -57,11 +57,11 @@ class SyncWorker(
                     currentCoroutineContext().ensureActive()
                     if (auth.currentUser?.uid != ownerId) throw CancellationException("Account changed")
                 }
-                suspend fun request(payload: JSONObject?): SyncSnapshot {
+                suspend fun request(payload: JSONObject?): BusinessSnapshot {
                     checkAccount()
                     suspend fun send(): JSONObject {
                         val connection = (URL(BuildConfig.API_BASE_URL.trimEnd('/') +
-                            if (payload == null) "/v1/snapshot" else "/v1/sync").openConnection() as HttpURLConnection).apply {
+                            if (payload == null) "/v2/snapshot" else "/v2/sync").openConnection() as HttpURLConnection).apply {
                             requestMethod = if (payload == null) "GET" else "POST"
                             instanceFollowRedirects = false
                             connectTimeout = 15_000
@@ -87,30 +87,40 @@ class SyncWorker(
                     checkAccount()
                     val rows = body.getJSONArray("transactions")
                     val products = body.getJSONArray("products")
-                    return SyncSnapshot(
-                        body.optJSONObject("business")?.toBusiness(ownerId),
+                    val businesses = body.getJSONArray("businesses")
+                    val account = body.getJSONObject("account")
+                    AccountStateStore(applicationContext).write(ownerId, account)
+                    val list = List(businesses.length()) { businesses.getJSONObject(it).toBusiness(ownerId) }
+                    return BusinessSnapshot(
+                        list,
                         List(products.length()) { products.getJSONObject(it).toProduct(ownerId) },
                         List(rows.length()) { rows.getJSONObject(it).toEntity(ownerId) },
+                        list.filter { account.optBoolean("premium") || it.id == account.optString("freeBusinessId") }.map { it.id }.toSet(),
+                        account.optString("legacyBusinessId").takeIf { it.isNotBlank() },
                     )
                 }
-                val store = object : SyncStore {
-                    override suspend fun business() = dao.getBusiness(ownerId)
+                val store = object : MultiBusinessStore {
+                    override suspend fun businesses() = dao.getBusinesses(ownerId)
                     override suspend fun pendingProducts() = dao.getPendingProducts(ownerId)
                     override suspend fun pendingTransactions() = dao.getPendingTransactions(ownerId)
-                    override suspend fun apply(snapshot: SyncSnapshot) {
+                    override suspend fun apply(snapshot: BusinessSnapshot) {
                         checkAccount()
-                        dao.applySnapshot(snapshot.business, snapshot.products, snapshot.transactions)
+                        dao.applyMultiSnapshot(ownerId, snapshot.businesses, snapshot.products, snapshot.transactions, snapshot.bootstrapId)
                     }
                 }
-                val remote = object : SyncRemote {
+                val remote = object : MultiBusinessRemote {
                     override suspend fun snapshot() = request(null)
                     override suspend fun upload(business: BusinessEntity, products: List<ProductEntity>, transactions: List<TransactionEntity>) =
                         request(JSONObject().put("business", business.toJson())
                             .put("products", JSONArray().apply { products.forEach { put(it.toJson()) } })
                             .put("transactions", JSONArray().apply { transactions.forEach { put(it.toJson()) } }))
                 }
-                SyncEngine(store, remote).sync()
-                status.write(ownerId, "success")
+                MultiBusinessSyncEngine(store, remote).sync()
+                val account = AccountStateStore(applicationContext).read(ownerId)
+                val held = if (account.premium) false else
+                    (dao.getPendingProducts(ownerId).any { it.businessId != account.freeBusinessId } ||
+                        dao.getPendingTransactions(ownerId).any { it.businessId != account.freeBusinessId })
+                status.write(ownerId, "success", if (held) "Sebagian perubahan menunggu aktivasi bisnis. Pilih bisnis gratis aktif atau perpanjang Premium; data tetap tersimpan." else "")
                 Result.success()
             } catch (cancelled: CancellationException) {
                 status.write(ownerId, "queued", "Sinkronisasi belum selesai. Data tetap tersimpan di perangkat.")
@@ -245,7 +255,7 @@ private fun JSONObject.toProduct(ownerId: String) = ProductEntity(
     syncStatus = SyncStatus.SYNCED,
 )
 
-private fun JSONObject.toBusiness(ownerId: String) = BusinessEntity(
+internal fun JSONObject.toBusiness(ownerId: String) = BusinessEntity(
     id = getString("id"),
     ownerId = ownerId,
     name = getString("name"),

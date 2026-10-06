@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {live,summarize,monthlySeries,topProducts,categories,exportTransactions,csvCell} from '../public/analytics.mjs';
+const tx=(type,amount,month=10,extra={})=>({type,amount,category:'Bahan baku',transactionDate:new Date(2026,month-1,6).getTime(),deletedAt:null,...extra});
+test('cash-flow totals and zero-income margin remain finite',()=>{assert.deepEqual(summarize([tx('INCOME',95000),tx('EXPENSE',75000)]),{income:95000,expense:75000,profit:20000,margin:20000/95000*100,count:2});assert.equal(summarize([tx('EXPENSE',100)]).margin,0);});
+test('six-month series crosses years and retains empty months',()=>{const rows=monthlySeries([tx('INCOME',100,12)],'2027-02');assert.deepEqual(rows.map(r=>r.key),['2026-09','2026-10','2026-11','2026-12','2027-01','2027-02']);assert.equal(rows[3].income,100);assert.equal(rows[5].count,0);});
+test('deleted rows excluded and category/product metrics use real linked sales',()=>{const rows=live([tx('INCOME',50,10,{productId:'p',quantity:2}),tx('EXPENSE',25),tx('EXPENSE',1000,10,{deletedAt:1})]);assert.equal(categories(rows)[0].amount,25);assert.equal(topProducts(rows,[{id:'p',name:'Kopi'}])[0].quantity,2);});
+test('CSV handles commas, quotes and spreadsheet formulas',()=>{assert.equal(csvCell('=IMPORTXML("x")'),'"\'=IMPORTXML(""x"")"');assert.equal(csvCell(' +SUM(1,2)'),'"\' +SUM(1,2)"');const output=exportTransactions([tx('INCOME',100,10,{businessId:'b',paymentMethod:'Tunai',note:'a,"b"'})],[{id:'b',name:'Bisnis'}]);assert.ok(output.includes('"a,""b"""'));assert.ok(output.startsWith('\uFEFF'));});

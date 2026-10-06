@@ -1,7 +1,8 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Pool } from "pg";
 import { createApi, identityFrom } from "./api-app.js";
-import { firebaseProjectId } from "./config.js";
+import { firebaseProjectId as injectedProjectId } from "./config.js";
+const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || injectedProjectId;
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -22,10 +23,19 @@ const jwks = createRemoteJWKSet(
   ),
 );
 
-export default createApi(pool, async (token) => {
+const app = createApi(pool, async (token) => {
   const { payload } = await jwtVerify(token, jwks, {
     issuer: `https://securetoken.google.com/${firebaseProjectId}`,
     audience: firebaseProjectId,
   });
   return identityFrom(payload);
 });
+
+// Firebase identifiers are public; database credentials remain server-side.
+app.get("/web-config", (c) => {
+  c.header("Cache-Control", "no-store");
+  const apiKey = process.env.FIREBASE_WEB_API_KEY;
+  if (!apiKey) return c.json({error:"Dashboard belum dikonfigurasi."},503);
+  return c.json({apiKey,projectId:firebaseProjectId,authDomain:process.env.FIREBASE_AUTH_DOMAIN || `${firebaseProjectId}.firebaseapp.com`});
+});
+export default app;

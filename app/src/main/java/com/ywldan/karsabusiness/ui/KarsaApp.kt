@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.ywldan.karsabusiness.ui.screens.BusinessManagerScreen
 import com.ywldan.karsabusiness.ui.screens.AuthScreen
 import com.ywldan.karsabusiness.ui.screens.MainShell
 import com.ywldan.karsabusiness.ui.screens.OnboardingScreen
@@ -109,6 +110,11 @@ fun KarsaApp(model: MainViewModel, activity: Activity) {
                 onSave = model::saveProduct,
                 onDelete = model::deleteProduct,
             )
+        }
+
+        BackHandler(enabled = state.showBusinessManager, onBack = model::closeBusinessManager)
+        AnimatedVisibility(visible = state.showBusinessManager, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+            BusinessManagerScreen(state, model::closeBusinessManager, model::selectBusiness, model::createBusiness, model::chooseFreeBusiness)
         }
 
         SnackbarHost(

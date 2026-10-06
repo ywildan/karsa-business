@@ -25,6 +25,10 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,15 +56,29 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
     Scaffold(
         containerColor = Cream,
         topBar = {
-            if (state.sync.message.isNotBlank() || state.pendingCount > 0 || state.sync.phase == "running") {
-                Column(Modifier.fillMaxWidth().background(Color.White).statusBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                    Text(when {
-                        state.sync.phase == "running" -> "Menyinkronkan data…"
-                        state.sync.message.isNotBlank() -> state.sync.message
-                        else -> "${state.pendingCount} perubahan belum tersinkron. Data tersimpan di perangkat."
-                    })
-                    if (state.sync.phase != "running") {
-                        TextButton(onClick = model::syncNow) { Text("Coba sinkronkan") }
+            Column {
+                Row(
+                    Modifier.fillMaxWidth().background(Color.White).statusBarsPadding().padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = model::openBusinessManager, modifier = Modifier.weight(1f)) {
+                        Text("${state.business?.name.orEmpty()} ▾", fontWeight = FontWeight.Bold, color = Forest, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text(if (state.account.premium) "Premium" else "Gratis", Modifier.padding(end = 12.dp), color = Forest)
+                }
+                if (state.businessReadOnly) {
+                    Text("Bisnis ini hanya dapat dibaca", Modifier.fillMaxWidth().background(Lime).padding(12.dp), color = Forest)
+                }
+                if (state.sync.message.isNotBlank() || state.pendingCount > 0 || state.sync.phase == "running") {
+                    Column(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 8.dp)) {
+                        Text(when {
+                            state.sync.phase == "running" -> "Menyinkronkan data…"
+                            state.sync.message.isNotBlank() -> state.sync.message
+                            else -> "${state.pendingCount} perubahan belum tersinkron. Data tersimpan di perangkat."
+                        })
+                        if (state.sync.phase != "running") {
+                            TextButton(onClick = model::syncNow) { Text("Coba sinkronkan") }
+                        }
                     }
                 }
             }

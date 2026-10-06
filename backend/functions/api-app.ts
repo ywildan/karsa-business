@@ -1,14 +1,18 @@
-import { Hono } from "hono";
-import type { JWTPayload } from "jose";
+import { Hono, type MiddlewareHandler } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { InputError, requireBusiness, requireProducts, requireTransactions, upsertIdentity, upsertBusiness, upsertProduct, upsertTransaction, toApiBusiness, toApiProduct, toApiTransaction, type Identity } from "./records.js";
+import { registerPremiumApi } from "./premium-api.js";
+export { identityFrom } from "./records.js";
+export type { Identity } from "./records.js";
 import type { Pool, PoolClient } from "pg";
 
-export type Identity = { uid: string; email: string; name: string };
-type Variables = { identity: Identity };
+export type Variables = { identity: Identity };
 export function createApi(
   pool: Pool,
   authenticate: (token: string) => Promise<Identity>,
 ) {
   const app = new Hono<{ Variables: Variables }>();
+  app.use("*", bodyLimit({maxSize: 1_048_576}));
   app.onError((error, c) => {
     if (error instanceof InputError)
       return c.json({ error: error.message, code: "INVALID_REQUEST" }, 400);
@@ -22,7 +26,7 @@ export function createApi(
     );
   });
 
-  app.use("/v1/*", async (c, next) => {
+  const guard: MiddlewareHandler<{ Variables: Variables }> = async (c, next) => {
     const token = c.req.header("Authorization")?.replace(/^Bearer\s+/i, "");
     if (!token) return c.json({ error: "Unauthorized" }, 401);
     let identity: Identity;
@@ -35,8 +39,11 @@ export function createApi(
       );
     }
     c.set("identity", identity);
+    c.header("Cache-Control", "no-store");
     await next();
-  });
+  };
+  app.use("/v1/*", guard);
+  app.use("/v2/*", guard);
 
   app.get("/health", (c) =>
     c.json({ status: "ok", service: "karsa-business-api" }),
@@ -49,19 +56,19 @@ export function createApi(
       await upsertIdentity(client, identity);
       const businessResult = await client.query(
         `SELECT id, name, type, initial_capital, created_at, updated_at
-         FROM businesses WHERE owner_id = $1 LIMIT 1`,
+         FROM businesses WHERE owner_id = $1 AND id = COALESCE((SELECT legacy_business_id FROM app_users WHERE firebase_uid=$1),id) ORDER BY created_at, id LIMIT 1`,
         [identity.uid],
       );
       const transactionResult = await client.query(
         `SELECT id, business_id, type, amount, category, payment_method, note,
               transaction_date, created_at, updated_at, deleted_at, product_id, quantity
-         FROM transactions WHERE owner_id = $1 ORDER BY transaction_date DESC`,
-        [identity.uid],
+         FROM transactions WHERE owner_id = $1 AND business_id = $2 ORDER BY transaction_date DESC`,
+        [identity.uid, businessResult.rows[0]?.id ?? null],
       );
       const productResult = await client.query(
         `SELECT id, business_id, name, price, stock, created_at, updated_at, deleted_at
-         FROM products WHERE owner_id = $1 ORDER BY name`,
-        [identity.uid],
+         FROM products WHERE owner_id = $1 AND business_id = $2 ORDER BY name`,
+        [identity.uid, businessResult.rows[0]?.id ?? null],
       );
       return c.json({
         business: businessResult.rows[0]
@@ -103,7 +110,7 @@ export function createApi(
       await upsertIdentity(client, identity);
       await upsertBusiness(client, identity.uid, business);
       const canonical = await client.query(
-        `SELECT id FROM businesses WHERE owner_id = $1 LIMIT 1`,
+        `SELECT id FROM businesses WHERE owner_id = $1 AND id = COALESCE((SELECT legacy_business_id FROM app_users WHERE firebase_uid=$1),id) ORDER BY created_at, id LIMIT 1`,
         [identity.uid],
       );
       const businessId = String(canonical.rows[0].id);
@@ -126,21 +133,21 @@ export function createApi(
       }
       const businessResult = await client.query(
         `SELECT id, name, type, initial_capital, created_at, updated_at
-         FROM businesses WHERE owner_id = $1 LIMIT 1`,
+         FROM businesses WHERE owner_id = $1 AND id = COALESCE((SELECT legacy_business_id FROM app_users WHERE firebase_uid=$1),id) ORDER BY created_at, id LIMIT 1`,
         [identity.uid],
       );
       const result = await client.query(
         `SELECT id, business_id, type, amount, category, payment_method, note,
               transaction_date, created_at, updated_at, deleted_at, product_id, quantity
          FROM transactions
-        WHERE owner_id = $1
+        WHERE owner_id = $1 AND business_id = $2
         ORDER BY transaction_date DESC`,
-        [identity.uid],
+        [identity.uid, businessResult.rows[0]?.id ?? null],
       );
       const syncedProducts = await client.query(
         `SELECT id, business_id, name, price, stock, created_at, updated_at, deleted_at
-         FROM products WHERE owner_id = $1 ORDER BY name`,
-        [identity.uid],
+         FROM products WHERE owner_id = $1 AND business_id = $2 ORDER BY name`,
+        [identity.uid, businessResult.rows[0]?.id ?? null],
       );
       await client.query("COMMIT");
       return c.json({
@@ -160,357 +167,6 @@ export function createApi(
     }
   });
 
+  registerPremiumApi(app, pool);
   return app;
-}
-
-class InputError extends Error {}
-
-export function identityFrom(payload: JWTPayload): Identity {
-  const email = String(payload.email ?? "")
-    .trim()
-    .toLowerCase();
-  if (
-    payload.email_verified !== true ||
-    !email.endsWith("@students.untidar.ac.id")
-  ) {
-    throw new InputError("Campus email is required");
-  }
-  if (!payload.sub) throw new InputError("Missing subject");
-  return {
-    uid: payload.sub,
-    email,
-    name: String(payload.name ?? email.split("@")[0]),
-  };
-}
-
-type BusinessInput = {
-  id: string;
-  name: string;
-  type: string;
-  initialCapital: number;
-  createdAt: number;
-  updatedAt: number;
-};
-type TransactionInput = {
-  id: string;
-  businessId: string;
-  type: "INCOME" | "EXPENSE";
-  amount: number;
-  category: string;
-  paymentMethod: string;
-  note: string;
-  transactionDate: number;
-  createdAt: number;
-  updatedAt: number;
-  deletedAt: number | null;
-  productId: string | null;
-  quantity: number | null;
-};
-type ProductInput = {
-  id: string;
-  businessId: string;
-  name: string;
-  price: number;
-  stock: number;
-  createdAt: number;
-  updatedAt: number;
-  deletedAt: number | null;
-};
-
-function requireBusiness(value: unknown): BusinessInput {
-  const v = value as Record<string, unknown>;
-  if (
-    !v ||
-    typeof v.id !== "string" ||
-    typeof v.name !== "string" ||
-    v.name.trim().length < 2
-  ) {
-    throw new InputError("Invalid business");
-  }
-  return {
-    id: requireUuid(v.id),
-    name: v.name.trim().slice(0, 80),
-    type: String(v.type ?? "Lainnya").slice(0, 40),
-    initialCapital: safeInteger(v.initialCapital, true),
-    createdAt: safeTimestamp(v.createdAt),
-    updatedAt: safeTimestamp(v.updatedAt),
-  };
-}
-
-function requireTransactions(value: unknown): TransactionInput[] {
-  if (!Array.isArray(value) || value.length > 500)
-    throw new InputError("Invalid transactions");
-  return value.map((entry) => {
-    const v = entry as Record<string, unknown>;
-    if (!v || typeof v !== "object")
-      throw new InputError("Invalid transaction");
-    const type = String(v.type);
-    const paymentMethod = String(v.paymentMethod);
-    if (!v.id || !v.businessId || !["INCOME", "EXPENSE"].includes(type))
-      throw new InputError("Invalid transaction");
-    if (!["Tunai", "QRIS", "Transfer"].includes(paymentMethod))
-      throw new InputError("Invalid payment method");
-    const rawProductId = v.productId;
-    const productId =
-      rawProductId == null || String(rawProductId).trim() === ""
-        ? null
-        : requireUuid(rawProductId);
-    const quantity = v.quantity == null ? null : safeInteger(v.quantity, false);
-    if (quantity != null && quantity > 2_147_483_647)
-      throw new InputError("Quantity too large");
-    if ((productId == null) !== (quantity == null))
-      throw new InputError("Invalid transaction product");
-    if (productId != null && type !== "INCOME")
-      throw new InputError("Invalid transaction product");
-    return {
-      id: requireUuid(v.id),
-      businessId: requireUuid(v.businessId),
-      type: type as "INCOME" | "EXPENSE",
-      amount: safeInteger(v.amount, false),
-      category: String(v.category ?? "Lainnya").slice(0, 60),
-      paymentMethod,
-      note: String(v.note ?? "").slice(0, 120),
-      transactionDate: safeTimestamp(v.transactionDate),
-      createdAt: safeTimestamp(v.createdAt),
-      updatedAt: safeTimestamp(v.updatedAt),
-      deletedAt: v.deletedAt == null ? null : safeTimestamp(v.deletedAt),
-      productId,
-      quantity,
-    };
-  });
-}
-
-function requireProducts(value: unknown): ProductInput[] {
-  if (!Array.isArray(value) || value.length > 500)
-    throw new InputError("Invalid products");
-  return value.map((entry) => {
-    const v = entry as Record<string, unknown>;
-    if (
-      !v ||
-      !v.id ||
-      !v.businessId ||
-      typeof v.name !== "string" ||
-      v.name.trim().length < 1
-    ) {
-      throw new InputError("Invalid product");
-    }
-    return {
-      id: requireUuid(v.id),
-      businessId: requireUuid(v.businessId),
-      name: v.name.trim().slice(0, 80),
-      price: safeInteger(v.price, true),
-      stock: safeInteger(v.stock, true),
-      createdAt: safeTimestamp(v.createdAt),
-      updatedAt: safeTimestamp(v.updatedAt),
-      deletedAt: v.deletedAt == null ? null : safeTimestamp(v.deletedAt),
-    };
-  });
-}
-
-function safeInteger(value: unknown, allowZero: boolean): number {
-  const number = Number(value);
-  if (!Number.isSafeInteger(number) || number < (allowZero ? 0 : 1))
-    throw new InputError("Invalid amount");
-  return number;
-}
-
-function safeTimestamp(value: unknown): number {
-  const number = Number(value);
-  if (
-    !Number.isSafeInteger(number) ||
-    number < 0 ||
-    number > 8_640_000_000_000_000
-  )
-    throw new InputError("Invalid timestamp");
-  return number;
-}
-
-function requireUuid(value: unknown): string {
-  if (
-    typeof value !== "string" ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      value,
-    )
-  ) {
-    throw new InputError("Invalid identifier");
-  }
-  return value.toLowerCase();
-}
-
-async function upsertIdentity(client: PoolClient, identity: Identity) {
-  await client.query(
-    `INSERT INTO app_users(firebase_uid, email, display_name)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (firebase_uid) DO UPDATE SET
-       email = EXCLUDED.email, display_name = EXCLUDED.display_name, updated_at = now()`,
-    [identity.uid, identity.email, identity.name],
-  );
-}
-
-async function upsertBusiness(
-  client: PoolClient,
-  uid: string,
-  b: BusinessInput,
-) {
-  await client.query(
-    `INSERT INTO businesses(id, owner_id, name, type, initial_capital, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, to_timestamp($6 / 1000.0), to_timestamp($7 / 1000.0))
-     ON CONFLICT (owner_id) DO UPDATE SET
-       name = EXCLUDED.name, type = EXCLUDED.type, initial_capital = EXCLUDED.initial_capital,
-       updated_at = EXCLUDED.updated_at
-     WHERE EXCLUDED.updated_at >= businesses.updated_at`,
-    [b.id, uid, b.name, b.type, b.initialCapital, b.createdAt, b.updatedAt],
-  );
-}
-
-async function upsertTransaction(
-  client: PoolClient,
-  uid: string,
-  businessId: string,
-  t: TransactionInput,
-) {
-  const result = await client.query(
-    `INSERT INTO transactions(
-       id, business_id, owner_id, type, amount, category, payment_method, note,
-       transaction_date, created_at, updated_at, deleted_at, product_id, quantity
-     ) SELECT $1, b.id, $2, $3, $4, $5, $6, $7,
-              to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), to_timestamp($10 / 1000.0),
-              CASE WHEN $11::bigint IS NULL THEN NULL ELSE to_timestamp($11 / 1000.0) END,
-              $13::uuid, $14::int
-         FROM businesses b WHERE b.id = $12 AND b.owner_id = $2
-     ON CONFLICT (id) DO UPDATE SET
-       type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category,
-       payment_method = EXCLUDED.payment_method, note = EXCLUDED.note,
-       transaction_date = EXCLUDED.transaction_date, updated_at = EXCLUDED.updated_at,
-       deleted_at = EXCLUDED.deleted_at,
-       product_id = EXCLUDED.product_id, quantity = EXCLUDED.quantity
-     WHERE transactions.owner_id = $2 AND EXCLUDED.updated_at >= transactions.updated_at
-     RETURNING id`,
-    [
-      t.id,
-      uid,
-      t.type,
-      t.amount,
-      t.category,
-      t.paymentMethod,
-      t.note,
-      t.transactionDate,
-      t.createdAt,
-      t.updatedAt,
-      t.deletedAt,
-      businessId,
-      t.productId,
-      t.quantity,
-    ],
-  );
-  if (result.rowCount === 0)
-    await requireOwnedId(client, "transactions", t.id, uid);
-}
-
-async function upsertProduct(
-  client: PoolClient,
-  uid: string,
-  businessId: string,
-  p: ProductInput,
-) {
-  const result = await client.query(
-    `INSERT INTO products(
-       id, business_id, owner_id, name, price, stock,
-       created_at, updated_at, deleted_at
-     ) SELECT $1, b.id, $2, $3, $4, $5,
-              to_timestamp($6 / 1000.0), to_timestamp($7 / 1000.0),
-              CASE WHEN $8::bigint IS NULL THEN NULL ELSE to_timestamp($8 / 1000.0) END
-         FROM businesses b WHERE b.id = $9 AND b.owner_id = $2
-     ON CONFLICT (id) DO UPDATE SET
-       name = CASE WHEN EXCLUDED.updated_at >= products.updated_at THEN EXCLUDED.name ELSE products.name END,
-       price = CASE WHEN EXCLUDED.updated_at >= products.updated_at THEN EXCLUDED.price ELSE products.price END,
-       stock = CASE WHEN EXCLUDED.updated_at >= products.updated_at THEN EXCLUDED.stock ELSE products.stock END,
-       updated_at = GREATEST(products.updated_at, EXCLUDED.updated_at),
-       deleted_at = COALESCE(products.deleted_at, EXCLUDED.deleted_at)
-     WHERE products.owner_id = $2 AND (EXCLUDED.updated_at >= products.updated_at OR EXCLUDED.deleted_at IS NOT NULL)
-     RETURNING id`,
-    [
-      p.id,
-      uid,
-      p.name,
-      p.price,
-      p.stock,
-      p.createdAt,
-      p.updatedAt,
-      p.deletedAt,
-      businessId,
-    ],
-  );
-  if (result.rowCount === 0)
-    await requireOwnedId(client, "products", p.id, uid);
-}
-
-async function requireOwnedId(
-  client: PoolClient,
-  table: "products" | "transactions",
-  id: string,
-  uid: string,
-) {
-  const result = await client.query(
-    `SELECT owner_id FROM ${table} WHERE id = $1`,
-    [id],
-  );
-  if (result.rows.length && result.rows[0].owner_id !== uid)
-    throw new InputError("Invalid identifier");
-}
-
-function toApiProduct(row: Record<string, unknown>) {
-  const millis = (value: unknown) =>
-    value == null
-      ? null
-      : value instanceof Date
-        ? value.getTime()
-        : new Date(String(value)).getTime();
-  return {
-    id: row.id,
-    businessId: row.business_id,
-    name: row.name,
-    price: Number(row.price),
-    stock: Number(row.stock),
-    createdAt: millis(row.created_at),
-    updatedAt: millis(row.updated_at),
-    deletedAt: millis(row.deleted_at),
-  };
-}
-
-function toApiTransaction(row: Record<string, unknown>) {
-  const millis = (value: unknown) =>
-    value == null
-      ? null
-      : value instanceof Date
-        ? value.getTime()
-        : new Date(String(value)).getTime();
-  return {
-    id: row.id,
-    businessId: row.business_id,
-    type: row.type,
-    amount: Number(row.amount),
-    category: row.category,
-    paymentMethod: row.payment_method,
-    note: row.note,
-    transactionDate: millis(row.transaction_date),
-    createdAt: millis(row.created_at),
-    updatedAt: millis(row.updated_at),
-    deletedAt: millis(row.deleted_at),
-    productId: row.product_id ?? null,
-    quantity: row.quantity == null ? null : Number(row.quantity),
-  };
-}
-
-function toApiBusiness(row: Record<string, unknown>) {
-  const millis = (value: unknown) =>
-    value instanceof Date ? value.getTime() : new Date(String(value)).getTime();
-  return {
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    initialCapital: Number(row.initial_capital),
-    createdAt: millis(row.created_at),
-    updatedAt: millis(row.updated_at),
-  };
 }

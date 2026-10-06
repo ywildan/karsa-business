@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [BusinessEntity::class, TransactionEntity::class, ProductEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class KarsaDatabase : RoomDatabase() {
@@ -41,10 +41,17 @@ abstract class KarsaDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP INDEX IF EXISTS index_businesses_ownerId")
+                db.execSQL("CREATE INDEX index_businesses_ownerId ON businesses(ownerId)")
+            }
+        }
+
         fun create(context: Context): KarsaDatabase = Room.databaseBuilder(
             context.applicationContext,
             KarsaDatabase::class.java,
             "karsa.db",
-        ).addMigrations(MIGRATION_1_2).fallbackToDestructiveMigration(false).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
 }
