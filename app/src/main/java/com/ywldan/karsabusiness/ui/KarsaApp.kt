@@ -1,6 +1,7 @@
 package com.ywldan.karsabusiness.ui
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -75,6 +76,11 @@ fun KarsaApp(model: MainViewModel, activity: Activity) {
                 AppStage.MAIN -> MainShell(state, model)
             }
         }
+
+        // These forms are overlays, so system Back must close them explicitly.
+        // Keep handlers outside AnimatedVisibility to disable them during exit.
+        BackHandler(enabled = state.showTransactionForm, onBack = model::closeAdd)
+        BackHandler(enabled = state.showProductForm, onBack = model::closeProductForm)
 
         AnimatedVisibility(
             visible = state.showTransactionForm,
