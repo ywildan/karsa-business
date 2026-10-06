@@ -123,3 +123,9 @@ Pengembangan tidak menjalankan npm/pip/Gradle dependency install atau download l
 - CSV menetralkan formula spreadsheet dari teks pengguna. PDF memakai dialog cetak browser; tidak ada library PDF tambahan.
 
 Konflik perubahan offline tetap mengikuti `updatedAt` terbaru seperti sinkronisasi sebelumnya. Kolaborasi staf/role, pembayaran otomatis, penghapusan bisnis, dan rekonsiliasi konflik stok dua HP yang bersamaan belum ditambahkan.
+
+## Jika login Google menampilkan popup-blocked
+
+Pesan ini berarti browser menolak jendela Google. Dashboard menampilkan petunjuk dan tombol **Coba login Google lagi**. Pada browser laptop, klik indikator popup diblokir di address bar, izinkan popup khusus untuk domain dashboard, kemudian coba lagi. Handler Google memanggil Firebase langsung dari klik pengguna; izin popup tetap dikendalikan browser.
+
+Tidak diperlukan perubahan API key, Premium, atau database untuk error ini. Jangan beralih ke signInWithRedirect tanpa menyiapkan penanganan storage lintas domain sesuai [panduan Firebase](https://firebase.google.com/docs/auth/web/redirect-best-practices).
