@@ -42,7 +42,7 @@ import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
-import com.ywldan.karsabusiness.ui.theme.Mint
+import com.ywldan.karsabusiness.ui.theme.MintLight
 import com.ywldan.karsabusiness.ui.theme.Muted
 import kotlinx.coroutines.launch
 
@@ -53,29 +53,30 @@ private data class OnboardingPage(
     val accent: Color,
 )
 
+/* Warna ilustrasi statis (tidak mengikuti mode) agar panel onboarding tetap berwarna. */
+private val pages = listOf(
+    OnboardingPage(
+        Icons.Rounded.AccountBalanceWallet,
+        "Uang usaha, jangan dicampur lagi.",
+        "Pisahkan kas bisnis dari uang jajan supaya kamu tahu usaha benar-benar tumbuh.",
+        Lime,
+    ),
+    OnboardingPage(
+        Icons.Rounded.Bolt,
+        "Catat transaksi secepat pesan kopi.",
+        "Nominal, kategori, simpan. Transaksi harian masuk hanya dalam beberapa ketukan.",
+        Amber,
+    ),
+    OnboardingPage(
+        Icons.Rounded.Insights,
+        "Laba terlihat tanpa hitung manual.",
+        "Karsa merangkum pemasukan, pengeluaran, saldo, dan performa usahamu.",
+        MintLight,
+    ),
+)
+
 @Composable
 fun OnboardingScreen(onFinished: () -> Unit) {
-    // Dibuat di dalam composable karena aksen warna kini mengikuti mode tampilan.
-    val pages = listOf(
-        OnboardingPage(
-            Icons.Rounded.AccountBalanceWallet,
-            "Uang usaha, jangan dicampur lagi.",
-            "Pisahkan kas bisnis dari uang jajan supaya kamu tahu usaha benar-benar tumbuh.",
-            Lime,
-        ),
-        OnboardingPage(
-            Icons.Rounded.Bolt,
-            "Catat transaksi secepat pesan kopi.",
-            "Nominal, kategori, simpan. Transaksi harian masuk hanya dalam beberapa ketukan.",
-            Amber,
-        ),
-        OnboardingPage(
-            Icons.Rounded.Insights,
-            "Laba terlihat tanpa hitung manual.",
-            "Karsa merangkum pemasukan, pengeluaran, saldo, dan performa usahamu.",
-            Mint,
-        ),
-    )
     val pager = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
     Column(
