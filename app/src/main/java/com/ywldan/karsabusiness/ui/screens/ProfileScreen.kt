@@ -20,8 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import com.ywldan.karsabusiness.ui.components.BusinessPicker
+import com.ywldan.karsabusiness.ui.components.ActiveBusinessCard
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,16 +66,16 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
-                Text("Bisnis aktif", color = Muted, style = MaterialTheme.typography.bodySmall)
-                Column(Modifier.padding(top = 10.dp)) {
-                    BusinessPicker(state.business?.name.orEmpty(), onBusiness, enabled = !state.busy)
-                    Text(state.business?.type.orEmpty(), Modifier.padding(start = 12.dp, top = 4.dp),
-                        color = Muted, style = MaterialTheme.typography.bodySmall)
-                }
-                Text("Paket ${if (state.account.premium) "Premium" else "gratis"} · ${state.businesses.size} dari ${state.account.businessLimit} bisnis", Modifier.padding(top = 14.dp), color = Forest, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = onManageBusinesses, enabled = !state.busy) { Text("Kelola bisnis", color = Forest, fontWeight = FontWeight.Bold) }
-            }
+            ActiveBusinessCard(
+                name = state.business?.name.orEmpty(),
+                category = state.business?.type.orEmpty(),
+                premium = state.account.premium,
+                businessCount = state.businesses.size,
+                businessLimit = state.account.businessLimit,
+                onSwitch = onBusiness,
+                onManage = onManageBusinesses,
+                enabled = !state.busy,
+            )
         }
         item {
             Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {

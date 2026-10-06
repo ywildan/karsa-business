@@ -27,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import com.ywldan.karsabusiness.ui.components.BusinessPicker
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +58,6 @@ fun HomeScreen(
     padding: PaddingValues,
     onTab: (MainTab) -> Unit,
     onAdd: (TransactionEntity?) -> Unit,
-    onBusiness: () -> Unit,
 ) {
     val currentMonth = YearMonth.now()
     val monthlyTransactions = state.transactions.filter { transaction ->
@@ -95,7 +93,6 @@ fun HomeScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Halo, ${state.user?.name?.substringBefore(' ') ?: "Kawan"}!", style = MaterialTheme.typography.headlineMedium)
-                    BusinessPicker(state.business?.name.orEmpty(), onBusiness, Modifier.padding(top = 6.dp), enabled = !state.busy)
                 }
                 IconButton(onClick = {}) {
                     Icon(Icons.Rounded.NotificationsNone, "Notifikasi", tint = Forest)
@@ -106,7 +103,7 @@ fun HomeScreen(
             Column(
                 Modifier.fillMaxWidth().background(Forest, RoundedCornerShape(28.dp)).padding(22.dp),
             ) {
-                Text("SALDO KAS", color = Color.White.copy(alpha = .65f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Text("Saldo kas — ${state.business?.name.orEmpty()}", color = Color.White.copy(alpha = .80f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                 Text(rupiah(state.summary.balance), Modifier.padding(top = 6.dp), color = Color.White, style = MaterialTheme.typography.headlineLarge)
                 Row(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BalanceMini("Pemasukan", state.summary.income, Icons.Rounded.ArrowDownward, Lime, Modifier.weight(1f))

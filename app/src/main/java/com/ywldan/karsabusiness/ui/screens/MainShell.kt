@@ -115,10 +115,10 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
     ) { padding ->
         AnimatedContent(state.selectedTab, label = "main-tab") { tab ->
             when (tab) {
-                MainTab.HOME -> HomeScreen(state, padding, model::selectTab, model::openAdd, openBusinessSwitcher)
-                MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd, openBusinessSwitcher)
-                MainTab.PRODUCTS -> ProductScreen(state, padding, model, openBusinessSwitcher)
-                MainTab.REPORTS -> ReportsScreen(state, padding, openBusinessSwitcher)
+                MainTab.HOME -> HomeScreen(state, padding, model::selectTab, model::openAdd)
+                MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd)
+                MainTab.PRODUCTS -> ProductScreen(state, padding, model)
+                MainTab.REPORTS -> ReportsScreen(state, padding)
                 MainTab.PROFILE -> ProfileScreen(state, padding, model::syncNow, model::signOut, openBusinessSwitcher, model::openBusinessManager)
             }
         }

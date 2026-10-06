@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Business
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -43,28 +40,6 @@ import com.ywldan.karsabusiness.ui.theme.Forest
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
-
-/** An unobtrusive business context inside the page's existing header. */
-@Composable
-fun BusinessPicker(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.widthIn(max = 280.dp).heightIn(min = 48.dp)
-            .semantics { contentDescription = "Bisnis aktif: $name. Buka pilihan bisnis" },
-        shape = RoundedCornerShape(100.dp),
-        color = Mint,
-        contentColor = Forest,
-    ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            Icon(Icons.Rounded.Business, null, Modifier.size(16.dp))
-            Text(name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Icon(Icons.Rounded.ExpandMore, null, Modifier.size(18.dp))
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
