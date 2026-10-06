@@ -28,15 +28,16 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ywldan.karsabusiness.ui.MainUiState
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
@@ -48,7 +49,7 @@ fun BusinessSwitcherSheet(state: MainUiState, onDismiss: () -> Unit, onSelect: (
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Cream,
-        contentColor = Forest,
+        contentColor = Ink,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
@@ -61,15 +62,16 @@ fun BusinessSwitcherSheet(state: MainUiState, onDismiss: () -> Unit, onSelect: (
                     onClick = { onSelect(business.id) },
                     enabled = !state.busy,
                     modifier = Modifier.fillMaxWidth().semantics { selected = active },
-                    color = if (active) Mint else Color.White,
-                    contentColor = Forest,
+                    color = if (active) Mint else Card,
+                    contentColor = Ink,
                     shape = RoundedCornerShape(20.dp),
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.size(40.dp).background(if (active) Lime else Cream, CircleShape),
                             contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Business, null, Modifier.size(20.dp))
+                            Icon(Icons.Rounded.Business, null, Modifier.size(20.dp),
+                                tint = if (active) Forest else Ink)
                         }
                         Column(Modifier.weight(1f)) {
                             Text(business.name, style = MaterialTheme.typography.titleMedium,

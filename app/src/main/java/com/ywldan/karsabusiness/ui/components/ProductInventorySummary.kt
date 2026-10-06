@@ -31,11 +31,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ywldan.karsabusiness.domain.InventorySummary
 import com.ywldan.karsabusiness.ui.theme.Butter
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnButter
+import com.ywldan.karsabusiness.ui.theme.OnMint
 import java.math.BigInteger
 import java.text.NumberFormat
 import java.util.Locale
@@ -50,16 +54,16 @@ fun ProductInventorySummary(inventory: InventorySummary, modifier: Modifier = Mo
             if (stacked) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     InventoryCountCard("Jenis produk", numbers.format(inventory.totalProducts), "Dalam katalog",
-                        Icons.Rounded.Category, Mint, Forest, Modifier.fillMaxWidth())
+                        Icons.Rounded.Category, Mint, OnMint, Modifier.fillMaxWidth())
                     InventoryCountCard("Total stok", numbers.format(inventory.totalStock), "Unit tersedia",
-                        Icons.Rounded.Inventory2, Butter, Color(0xFF8A5A00), Modifier.fillMaxWidth())
+                        Icons.Rounded.Inventory2, Butter, OnButter, Modifier.fillMaxWidth())
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     InventoryCountCard("Jenis produk", numbers.format(inventory.totalProducts), "Dalam katalog",
-                        Icons.Rounded.Category, Mint, Forest, Modifier.weight(1f))
+                        Icons.Rounded.Category, Mint, OnMint, Modifier.weight(1f))
                     InventoryCountCard("Total stok", numbers.format(inventory.totalStock), "Unit tersedia",
-                        Icons.Rounded.Inventory2, Butter, Color(0xFF8A5A00), Modifier.weight(1f))
+                        Icons.Rounded.Inventory2, Butter, OnButter, Modifier.weight(1f))
                 }
             }
         }
@@ -84,11 +88,11 @@ fun ProductInventorySummary(inventory: InventorySummary, modifier: Modifier = Mo
 private fun InventoryCountCard(label: String, value: String, description: String,
     icon: ImageVector, iconBackground: Color, iconTint: Color, modifier: Modifier) {
     Column(modifier.semantics(mergeDescendants = true) {}
-        .background(Color.White, RoundedCornerShape(22.dp)).padding(16.dp)) {
+        .background(Card, RoundedCornerShape(22.dp)).padding(16.dp)) {
         InventoryIcon(icon, iconTint, iconBackground)
         Text(label, Modifier.padding(top = 12.dp), color = Muted,
             style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-        Text(value, Modifier.padding(top = 4.dp), color = Forest,
+        Text(value, Modifier.padding(top = 4.dp), color = Ink,
             fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, lineHeight = 36.sp)
         Text(description, Modifier.padding(top = 4.dp), color = Muted, style = MaterialTheme.typography.bodySmall)
     }

@@ -22,6 +22,7 @@ import com.ywldan.karsabusiness.domain.FinanceSummary
 import com.ywldan.karsabusiness.domain.InventorySummary
 import com.ywldan.karsabusiness.domain.calculateInventory
 import com.ywldan.karsabusiness.domain.calculateSummary
+import com.ywldan.karsabusiness.ui.theme.ThemeMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +68,8 @@ class MainViewModel(
     private val preferences = application.getSharedPreferences("karsa_preferences", 0)
     private val _state = MutableStateFlow(MainUiState())
     val state: StateFlow<MainUiState> = _state.asStateFlow()
+    private val _themeMode = MutableStateFlow(preferences.getInt("theme_mode", ThemeMode.SYSTEM))
+    val themeMode: StateFlow<Int> = _themeMode.asStateFlow()
     private var dataJob: Job? = null
     private val selectedBusinessId = MutableStateFlow<String?>(null)
 
@@ -85,6 +88,11 @@ class MainViewModel(
     fun finishOnboarding() {
         preferences.edit().putBoolean("onboarding_seen", true).apply()
         _state.update { it.copy(onboardingSeen = true) }
+    }
+
+    fun setThemeMode(mode: Int) {
+        preferences.edit().putInt("theme_mode", mode).apply()
+        _themeMode.value = mode
     }
 
     fun signIn(email: String, password: String) = performAuth {

@@ -28,7 +28,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Muted
 import java.text.NumberFormat
@@ -82,7 +84,7 @@ fun KarsaSnackbar(data: SnackbarData) {
     /* Notifikasi gaya aplikasi: kartu putih dengan mini logo, bukan snackbar gelap bawaan. */
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = Color.White,
+        color = Card,
         shadowElevation = 8.dp,
         modifier = Modifier.padding(horizontal = 22.dp).fillMaxWidth(),
     ) {
@@ -91,7 +93,7 @@ fun KarsaSnackbar(data: SnackbarData) {
             Text(
                 data.visuals.message,
                 Modifier.weight(1f).padding(start = 12.dp),
-                color = Forest,
+                color = Ink,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -133,7 +135,7 @@ fun SectionHeader(title: String, action: String? = null, onAction: (() -> Unit)?
         Text(title, style = MaterialTheme.typography.titleLarge)
         if (action != null && onAction != null) {
             androidx.compose.material3.TextButton(onClick = onAction) {
-                Text(action, color = Forest, fontWeight = FontWeight.Bold)
+                Text(action, color = Ink, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -142,7 +144,7 @@ fun SectionHeader(title: String, action: String? = null, onAction: (() -> Unit)?
 @Composable
 fun EmptyState(title: String, description: String) {
     Box(
-        Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(28.dp),
+        Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(28.dp),
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {

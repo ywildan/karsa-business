@@ -24,18 +24,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Ink
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnMint
 import com.ywldan.karsabusiness.ui.theme.Sand
 
 @Composable
@@ -53,7 +55,7 @@ fun ActiveBusinessCard(
     val initial = name.trim().let {
         if (it.isEmpty()) "K" else String(Character.toChars(it.codePointAt(0))).uppercase(java.util.Locale.forLanguageTag("id-ID"))
     }
-    Column(modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp),
+    Column(modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Surface(
             onClick = onSwitch,
@@ -62,8 +64,8 @@ fun ActiveBusinessCard(
                 contentDescription = "Ganti bisnis aktif: $name, kategori $category"
             },
             shape = RoundedCornerShape(18.dp),
-            color = Color.White,
-            contentColor = Forest,
+            color = Card,
+            contentColor = Ink,
         ) {
             Column(Modifier.padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -71,10 +73,10 @@ fun ActiveBusinessCard(
                     Text("Bisnis aktif", color = Muted, style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text("Ganti", color = Forest, fontWeight = FontWeight.Bold,
+                        Text("Ganti", color = Ink, fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodySmall)
                         Box(Modifier.size(32.dp).background(Mint, CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.ChevronRight, null, Modifier.size(20.dp), tint = Forest)
+                            Icon(Icons.Rounded.ChevronRight, null, Modifier.size(20.dp), tint = OnMint)
                         }
                     }
                 }
@@ -84,11 +86,11 @@ fun ActiveBusinessCard(
                         Text(initial, color = Forest, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp)
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text(name, color = Forest, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp,
+                        Text(name, color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp,
                             lineHeight = 32.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(category.ifBlank { "Lainnya" },
                             Modifier.background(Mint, RoundedCornerShape(100.dp)).padding(horizontal = 10.dp, vertical = 5.dp),
-                            color = Forest, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                            color = OnMint, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -112,7 +114,7 @@ fun ActiveBusinessCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             border = BorderStroke(1.dp, Sand),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Forest),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink),
         ) {
             Icon(Icons.Rounded.Storefront, null, Modifier.size(19.dp))
             Text("Kelola bisnis", Modifier.padding(start = 9.dp), fontWeight = FontWeight.Bold)

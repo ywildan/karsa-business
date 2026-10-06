@@ -23,22 +23,24 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.ywldan.karsabusiness.ui.components.BusinessSwitcherSheet
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.ywldan.karsabusiness.ui.MainTab
 import com.ywldan.karsabusiness.ui.MainUiState
 import com.ywldan.karsabusiness.ui.MainViewModel
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnMint
 
 private data class TabItem(val tab: MainTab, val label: String, val icon: ImageVector)
 private val tabs = listOf(
@@ -53,6 +55,7 @@ private val tabs = listOf(
 fun MainShell(state: MainUiState, model: MainViewModel) {
     var showBusinessSwitcher by rememberSaveable { mutableStateOf(false) }
     val openBusinessSwitcher = { showBusinessSwitcher = true }
+    val themeMode by model.themeMode.collectAsState()
     val showStatus = state.businessReadOnly || state.sync.message.isNotBlank() ||
         state.pendingCount > 0 || state.sync.phase == "running"
     Scaffold(
@@ -63,7 +66,7 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
                     Text("Bisnis ini hanya dapat dibaca", Modifier.fillMaxWidth().background(Lime).padding(12.dp), color = Forest)
                 }
                 if (state.sync.message.isNotBlank() || state.pendingCount > 0 || state.sync.phase == "running") {
-                    Column(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Column(Modifier.fillMaxWidth().background(Card).padding(horizontal = 20.dp, vertical = 8.dp)) {
                         Text(when {
                             state.sync.phase == "running" -> "Menyinkronkan data…"
                             state.sync.message.isNotBlank() -> state.sync.message
@@ -77,7 +80,7 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
             }
         },
         bottomBar = {
-            NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
+            NavigationBar(containerColor = Card, tonalElevation = 0.dp) {
                 tabs.forEach { item ->
                     NavigationBarItem(
                         selected = state.selectedTab == item.tab,
@@ -85,8 +88,8 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
                         icon = { Icon(item.icon, item.label) },
                         label = { Text(item.label) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Forest,
-                            selectedTextColor = Forest,
+                            selectedIconColor = OnMint,
+                            selectedTextColor = OnMint,
                             indicatorColor = Lime,
                             unselectedIconColor = Muted,
                             unselectedTextColor = Muted,
@@ -119,7 +122,7 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
                 MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd)
                 MainTab.PRODUCTS -> ProductScreen(state, padding, model)
                 MainTab.REPORTS -> ReportsScreen(state, padding)
-                MainTab.PROFILE -> ProfileScreen(state, padding, model::syncNow, model::signOut, openBusinessSwitcher, model::openBusinessManager)
+                MainTab.PROFILE -> ProfileScreen(state, padding, themeMode, model::setThemeMode, model::syncNow, model::signOut, openBusinessSwitcher, model::openBusinessManager)
             }
         }
     }

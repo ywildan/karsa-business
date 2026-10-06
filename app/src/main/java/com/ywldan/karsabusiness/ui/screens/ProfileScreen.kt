@@ -1,12 +1,15 @@
 package com.ywldan.karsabusiness.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,14 +33,25 @@ import androidx.compose.ui.unit.dp
 import com.ywldan.karsabusiness.BuildConfig
 import com.ywldan.karsabusiness.ui.MainUiState
 import com.ywldan.karsabusiness.ui.components.KarsaLogo
+import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.ThemeMode
 
 @Composable
-fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit, onLogout: () -> Unit, onBusiness: () -> Unit, onManageBusinesses: () -> Unit) {
+fun ProfileScreen(
+    state: MainUiState,
+    padding: PaddingValues,
+    themeMode: Int,
+    onThemeMode: (Int) -> Unit,
+    onSync: () -> Unit,
+    onLogout: () -> Unit,
+    onBusiness: () -> Unit,
+    onManageBusinesses: () -> Unit,
+) {
     LazyColumn(
         Modifier.fillMaxSize().background(Cream),
         contentPadding = PaddingValues(
@@ -66,6 +80,31 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
             }
         }
         item {
+            Column(Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(18.dp)) {
+                Text("Tampilan", fontWeight = FontWeight.Bold)
+                Text(
+                    "Mode gelap lebih nyaman dilihat di malam hari.",
+                    Modifier.padding(top = 4.dp),
+                    color = Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 12.dp)
+                        .background(Cream, RoundedCornerShape(16.dp)).padding(4.dp),
+                ) {
+                    ThemeChoice("Sistem", themeMode == ThemeMode.SYSTEM, Modifier.weight(1f)) {
+                        onThemeMode(ThemeMode.SYSTEM)
+                    }
+                    ThemeChoice("Terang", themeMode == ThemeMode.LIGHT, Modifier.weight(1f)) {
+                        onThemeMode(ThemeMode.LIGHT)
+                    }
+                    ThemeChoice("Gelap", themeMode == ThemeMode.DARK, Modifier.weight(1f)) {
+                        onThemeMode(ThemeMode.DARK)
+                    }
+                }
+            }
+        }
+        item {
             ActiveBusinessCard(
                 name = state.business?.name.orEmpty(),
                 category = state.business?.type.orEmpty(),
@@ -78,7 +117,7 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
             )
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
+            Column(Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(18.dp)) {
                 Text("Sinkronisasi", fontWeight = FontWeight.Bold)
                 Text("${state.pendingCount} perubahan menunggu", color = Muted)
                 if (state.sync.message.isNotBlank()) Text(state.sync.message, color = Muted)
@@ -107,6 +146,23 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+    }
+}
+
+@Composable
+private fun ThemeChoice(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.height(42.dp)
+            .background(if (selected) Lime else Color.Transparent, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color = if (selected) Forest else Muted,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 
