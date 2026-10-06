@@ -1015,13 +1015,4 @@ dialog::backdrop {
   }
 }
 
-.popup-help {
-  margin-top: 15px;
-  padding: 16px;
-  border-radius: 16px;
-  background: #E1F4E9;
-  color: var(--forest);
-}
-.popup-help strong { font-size: 13px; }
-.auth-form .popup-help p { margin: 8px 0 0; font-size: 12px; }
-.popup-help .text-button { padding-bottom: 0; }
+.auth-form .google-caption { margin-top: 9px; font-size: 11px; text-align: center; }

@@ -25,3 +25,9 @@ test("rewrites cannot change the request origin", () => {
   assert.equal(new URL(mapped.url).origin,"https://dashboard.example");
   assert.equal(new URL(mapped.url).pathname,"/api/index");
 });
+
+test("Firebase callback rewrites retain callback parameters", () => {
+  const mapped=routeVercelRequest(new Request("https://dashboard.example/api/index?route=/__/auth/handler&state=opaque"));
+  assert.equal(new URL(mapped.url).pathname,"/__/auth/handler");
+  assert.equal(new URL(mapped.url).searchParams.get("state"),"opaque");
+});
