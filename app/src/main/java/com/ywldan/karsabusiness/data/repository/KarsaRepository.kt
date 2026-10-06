@@ -17,7 +17,10 @@ class KarsaRepository(
     fun observeBusiness(ownerId: String): Flow<BusinessEntity?> = dao.observeBusiness(ownerId)
     fun observeTransactions(ownerId: String): Flow<List<TransactionEntity>> = dao.observeTransactions(ownerId)
 
+    fun observePendingCount(ownerId: String): Flow<Int> = dao.observePendingCount(ownerId)
+
     suspend fun createBusiness(ownerId: String, name: String, type: String, initialCapital: Long) {
+        require(initialCapital in 0..9_007_199_254_740_991L) { "Modal awal di luar batas" }
         val now = System.currentTimeMillis()
         dao.upsertBusiness(
             BusinessEntity(
@@ -46,12 +49,12 @@ class KarsaRepository(
         productId: String? = null,
         quantity: Long? = null,
     ) {
-        require(amount > 0) { "Nominal harus lebih dari 0" }
+        require(amount in 1..9_007_199_254_740_991L) { "Nominal harus lebih dari 0" }
         // Product links only apply to sales (INCOME); expenses clear the link.
         val linkedProductId = if (type == "INCOME") productId else null
         val linkedQuantity = if (type == "INCOME") quantity else null
         if (linkedProductId != null) {
-            require((linkedQuantity ?: 0L) > 0) { "Jumlah produk harus lebih dari 0" }
+            require((linkedQuantity ?: 0L) in 1..2_147_483_647L) { "Jumlah produk harus lebih dari 0" }
         }
         val now = System.currentTimeMillis()
         val previous = if (existingId != null) dao.getTransaction(existingId) else null
@@ -94,8 +97,8 @@ class KarsaRepository(
         stock: Long,
     ) {
         require(name.isNotBlank()) { "Nama produk wajib diisi" }
-        require(price >= 0) { "Harga tidak boleh negatif" }
-        require(stock >= 0) { "Stok awal tidak boleh negatif" }
+        require(price in 0..9_007_199_254_740_991L) { "Harga tidak boleh negatif" }
+        require(stock in 0..9_007_199_254_740_991L) { "Stok awal tidak boleh negatif" }
         val now = System.currentTimeMillis()
         dao.upsertProduct(
             ProductEntity(
@@ -114,8 +117,8 @@ class KarsaRepository(
 
     suspend fun updateProduct(product: ProductEntity, name: String, price: Long, stock: Long) {
         require(name.isNotBlank()) { "Nama produk wajib diisi" }
-        require(price >= 0) { "Harga tidak boleh negatif" }
-        require(stock >= 0) { "Stok tidak boleh negatif" }
+        require(price in 0..9_007_199_254_740_991L) { "Harga tidak boleh negatif" }
+        require(stock in 0..9_007_199_254_740_991L) { "Stok tidak boleh negatif" }
         dao.upsertProduct(
             product.copy(
                 name = name.trim(),
@@ -135,8 +138,8 @@ class KarsaRepository(
     suspend fun adjustStock(productId: String, delta: Long) {
         require(delta != 0L) { "Jumlah penyesuaian tidak boleh nol" }
         val product = dao.getProduct(productId) ?: error("Produk tidak ditemukan")
-        val newStock = product.stock + delta
-        require(newStock >= 0) { "Stok ${product.name} tidak mencukupi (tersisa ${product.stock})" }
+        val newStock = Math.addExact(product.stock, delta)
+        require(newStock in 0..9_007_199_254_740_991L) { "Stok ${product.name} tidak mencukupi (tersisa ${product.stock})" }
         dao.upsertProduct(
             product.copy(
                 stock = newStock,

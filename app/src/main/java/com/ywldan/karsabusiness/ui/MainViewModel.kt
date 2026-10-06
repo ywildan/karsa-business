@@ -14,6 +14,8 @@ import com.ywldan.karsabusiness.data.local.TransactionEntity
 import com.ywldan.karsabusiness.data.local.TransactionType
 import com.ywldan.karsabusiness.data.repository.KarsaRepository
 import com.ywldan.karsabusiness.data.sync.SyncScheduler
+import com.ywldan.karsabusiness.data.sync.SyncState
+import com.ywldan.karsabusiness.data.sync.SyncStateStore
 import com.ywldan.karsabusiness.domain.FinanceSummary
 import com.ywldan.karsabusiness.domain.InventorySummary
 import com.ywldan.karsabusiness.domain.calculateInventory
@@ -42,6 +44,8 @@ data class MainUiState(
     val showTransactionForm: Boolean = false,
     val productEditor: ProductEntity? = null,
     val showProductForm: Boolean = false,
+    val pendingCount: Int = 0,
+    val sync: SyncState = SyncState(),
     val busy: Boolean = false,
     val message: String? = null,
 )
@@ -225,9 +229,12 @@ class MainViewModel(
 
     fun deleteTransaction(id: String) {
         viewModelScope.launch {
-            repository.deleteTransaction(id)
-            closeAdd()
-            showMessage("Transaksi dipindahkan dari riwayat")
+            runCatching { repository.deleteTransaction(id) }
+                .onSuccess {
+                    closeAdd()
+                    showMessage("Transaksi dipindahkan dari riwayat")
+                }
+                .onFailure { showMessage(it.readableMessage()) }
         }
     }
 
@@ -255,12 +262,20 @@ class MainViewModel(
                 repository.observeBusiness(user.id),
                 repository.observeTransactions(user.id),
                 repository.observeProducts(user.id),
-            ) { business, transactions, products -> Triple(business, transactions, products) }
-                .collect { (business, transactions, products) ->
+                repository.observePendingCount(user.id),
+                SyncStateStore(getApplication()).observe(user.id),
+            ) { business, transactions, products, pending, sync ->
+                MainUiState(business = business, transactions = transactions, products = products, pendingCount = pending, sync = sync)
+            }.collect { data ->
+                    val business = data.business
+                    val transactions = data.transactions
+                    val products = data.products
                     _state.update {
                         it.copy(
                             loading = false,
                             business = business,
+                            pendingCount = data.pendingCount,
+                            sync = data.sync,
                             transactions = transactions,
                             products = products,
                             summary = calculateSummary(business?.initialCapital ?: 0, transactions),

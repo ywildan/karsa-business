@@ -36,7 +36,7 @@ import java.util.Locale
 
 private val Indonesian = Locale("id", "ID")
 
-fun rupiah(amount: Long): String = NumberFormat.getCurrencyInstance(Indonesian)
+fun rupiah(amount: Number): String = NumberFormat.getCurrencyInstance(Indonesian)
     .format(amount)
     .replace(",00", "")
     .replace("Rp", "Rp ")

@@ -1,5 +1,7 @@
 package com.ywldan.karsabusiness.domain
 
+import java.math.BigInteger
+
 import com.ywldan.karsabusiness.data.local.ProductEntity
 import com.ywldan.karsabusiness.data.local.TransactionEntity
 import com.ywldan.karsabusiness.data.local.TransactionType
@@ -30,7 +32,7 @@ fun isAllowedCampusEmail(email: String): Boolean =
 data class InventorySummary(
     val totalProducts: Int = 0,
     val totalStock: Long = 0L,
-    val inventoryValue: Long = 0L,
+    val inventoryValue: BigInteger = BigInteger.ZERO,
 )
 
 fun calculateInventory(products: List<ProductEntity>): InventorySummary {
@@ -38,7 +40,7 @@ fun calculateInventory(products: List<ProductEntity>): InventorySummary {
     return InventorySummary(
         totalProducts = active.size,
         totalStock = active.sumOf { it.stock },
-        inventoryValue = active.sumOf { it.stock * it.price },
+        inventoryValue = active.fold(BigInteger.ZERO) { total, product -> total + BigInteger.valueOf(product.stock) * BigInteger.valueOf(product.price) },
     )
 }
 

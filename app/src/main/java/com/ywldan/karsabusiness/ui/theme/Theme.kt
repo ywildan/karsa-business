@@ -53,8 +53,6 @@ fun KarsaTheme(content: @Composable () -> Unit) {
     val view = LocalView.current
     SideEffect {
         val window = (view.context as Activity).window
-        window.statusBarColor = Forest.toArgb()
-        window.navigationBarColor = Forest.toArgb()
         WindowCompat.getInsetsController(window, view).apply {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false

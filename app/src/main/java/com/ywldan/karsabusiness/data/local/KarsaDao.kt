@@ -23,11 +23,31 @@ interface KarsaDao {
     @Query("UPDATE transactions SET businessId = :businessId WHERE ownerId = :ownerId")
     suspend fun reassignTransactions(ownerId: String, businessId: String)
 
+    @Query("UPDATE products SET businessId = :businessId WHERE ownerId = :ownerId")
+    suspend fun reassignProducts(ownerId: String, businessId: String)
+
+    @Query("""SELECT (SELECT COUNT(*) FROM transactions WHERE ownerId = :ownerId AND syncStatus = 'PENDING') +
+        (SELECT COUNT(*) FROM products WHERE ownerId = :ownerId AND syncStatus = 'PENDING') +
+        (SELECT COUNT(*) FROM businesses WHERE ownerId = :ownerId AND syncStatus = 'PENDING')""")
+    fun observePendingCount(ownerId: String): Flow<Int>
+
+    @Transaction
+    suspend fun applySnapshot(business: BusinessEntity?, products: List<ProductEntity>, transactions: List<TransactionEntity>) {
+        if (business != null) {
+            val local = getBusiness(business.ownerId)
+            // Adopt the canonical ID while retaining newer offline business edits.
+            replaceBusiness(if (local != null && local.updatedAt > business.updatedAt) local.copy(id = business.id) else business)
+        }
+        syncProducts(products)
+        syncTransactions(transactions)
+    }
+
     @Transaction
     suspend fun replaceBusiness(business: BusinessEntity) {
         deleteBusinessForOwner(business.ownerId)
         upsertBusiness(business)
         reassignTransactions(business.ownerId, business.id)
+        reassignProducts(business.ownerId, business.id)
     }
 
     @Query(

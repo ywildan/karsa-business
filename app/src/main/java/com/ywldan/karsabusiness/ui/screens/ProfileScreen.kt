@@ -79,7 +79,18 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
             }
         }
         item {
-            OutlinedButton(onClick = onSync, Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)) {
+                Text("Sinkronisasi", fontWeight = FontWeight.Bold)
+                Text("${state.pendingCount} perubahan menunggu", color = Muted)
+                if (state.sync.message.isNotBlank()) Text(state.sync.message, color = Muted)
+                if (state.sync.lastSuccess > 0) Text(
+                    "Terakhir berhasil: " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(state.sync.lastSuccess)),
+                    color = Muted, style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        item {
+            OutlinedButton(onClick = onSync, Modifier.fillMaxWidth(), enabled = state.sync.phase != "running", shape = RoundedCornerShape(18.dp)) {
                 Icon(Icons.Rounded.CloudSync, null)
                 Text("Sinkronkan sekarang", Modifier.padding(start = 9.dp), fontWeight = FontWeight.Bold)
             }

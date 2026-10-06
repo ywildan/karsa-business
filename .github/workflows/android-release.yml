@@ -6,8 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Versi rilis, contoh v1.0.2. Wajib >= versi rilis terakhir."
+        description: "Versi rilis, contoh v1.0.2. Wajib lebih tinggi dari seluruh rilis yang sudah ada."
         required: true
+
+concurrency:
+  group: karsa-business-android-release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -15,7 +19,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     env:
       RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
     steps:
@@ -28,13 +32,11 @@ jobs:
         id: tag
         run: |
           set -euo pipefail
-          if ! printf '%s' "$RELEASE_TAG" | grep -Eq '^v?[0-9]+(\.[0-9]+){0,2}$'; then
-            echo "::error::Tag rilis '$RELEASE_TAG' tidak valid. Gunakan format vMAJOR.MINOR.PATCH, contoh v1.0.2."
+          python3 scripts/release_guard.py "$RELEASE_TAG"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Manual releases must build main."
             exit 1
           fi
-          version="${RELEASE_TAG#v}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Membangun rilis v$version"
 
       - name: Validate release secrets
         env:
@@ -85,35 +87,22 @@ jobs:
           gradle-version: "9.4.1"
           cache-provider: basic
 
-      # Android menolak APK dengan versionCode lebih rendah
-      # (INSTALL_FAILED_VERSION_DOWNGRADE), jadi pengguna harus uninstall
-      # aplikasi lama. Bandingkan nomor versi baru dengan rilis terakhir.
-      - name: Detect previous release version
-        id: previous
+      - name: Guard against replacing or downgrading existing releases
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          latest="$(gh release view --json tagName --jq '.tagName' 2>/dev/null || true)"
-          if printf '%s' "$latest" | grep -Eq '^v?[0-9]+(\.[0-9]+){0,2}$'; then
-            echo "version=${latest#v}" >> "$GITHUB_OUTPUT"
-            echo "Rilis terakhir yang terdaftar: $latest"
-          else
-            echo "version=" >> "$GITHUB_OUTPUT"
-            echo "Belum ada rilis terdaftar; perbandingan nomor versi dilewati."
-          fi
-
-      - name: Guard release version
-        env:
+          VERSION: ${{ steps.tag.outputs.version }}
           KARSA_VERSION_NAME: ${{ steps.tag.outputs.version }}
-          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
         run: |
           set -euo pipefail
-          args=()
-          if [ -n "${PREVIOUS_VERSION:-}" ]; then
-            args+=("-PpreviousVersionName=$PREVIOUS_VERSION")
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --slurp > "$RUNNER_TEMP/releases.json"
+          python3 scripts/release_guard.py "$VERSION" --releases "$RUNNER_TEMP/releases.json"
+          TAG="v$VERSION"
+          git ls-remote --tags origin "refs/tags/$TAG" > "$RUNNER_TEMP/remote-tag.txt"
+          if [ -s "$RUNNER_TEMP/remote-tag.txt" ]; then
+            git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
+            test "$(git rev-parse "$TAG^{commit}")" = "$GITHUB_SHA" || { echo "::error::Existing tag points to a different commit"; exit 1; }
           fi
-          gradle --no-daemon "${args[@]}" verifyReleaseVersion
+          ./gradlew --no-daemon verifyReleaseVersion
 
       # Decode base64 lalu buka keystore dengan keytool, supaya password/alias
       # yang salah ketahuan di sini - bukan setelah build gagal dengan pesan ambigu.
@@ -172,7 +161,7 @@ jobs:
           echo "Sertifikat rilis terverifikasi: $actual"
 
       - name: Test and build signed release APK
-        run: gradle --no-daemon testDebugUnitTest assembleRelease verifyReleaseConfig
+        run: ./gradlew --no-daemon testDebugUnitTest assembleRelease verifyReleaseConfig
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/karsa-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -257,5 +246,13 @@ jobs:
           set -euo pipefail
           TAG="v${VERSION}"
           cp app/build/outputs/apk/release/app-release.apk "Karsa-Business-${TAG}.apk"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --generate-notes --title "Karsa Business $TAG"
-          gh release upload "$TAG" "Karsa-Business-${TAG}.apk" --clobber
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --slurp > "$RUNNER_TEMP/releases.json"
+          python3 scripts/release_guard.py "$VERSION" --releases "$RUNNER_TEMP/releases.json"
+          sha256sum "Karsa-Business-${TAG}.apk" > SHA256SUMS
+          # --target binds manually created tags to the commit that was built.
+          gh release create "$TAG" "Karsa-Business-${TAG}.apk" SHA256SUMS \
+            --target "$GITHUB_SHA" --generate-notes --title "Karsa Business $TAG"
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/karsa-release.jks"
