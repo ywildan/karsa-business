@@ -14,41 +14,52 @@ interface KarsaDao {
     @Query("SELECT * FROM businesses WHERE ownerId = :ownerId LIMIT 1")
     suspend fun getBusiness(ownerId: String): BusinessEntity?
 
-    @Upsert
-    suspend fun upsertBusiness(business: BusinessEntity)
+    @Query("SELECT * FROM businesses WHERE ownerId = :ownerId ORDER BY createdAt, id")
+    fun observeBusinesses(ownerId: String): Flow<List<BusinessEntity>>
 
-    @Query("DELETE FROM businesses WHERE ownerId = :ownerId")
-    suspend fun deleteBusinessForOwner(ownerId: String)
+    @Query("SELECT * FROM businesses WHERE ownerId = :ownerId ORDER BY createdAt, id")
+    suspend fun getBusinesses(ownerId: String): List<BusinessEntity>
 
-    @Query("UPDATE transactions SET businessId = :businessId WHERE ownerId = :ownerId")
-    suspend fun reassignTransactions(ownerId: String, businessId: String)
+    @Query("SELECT * FROM businesses WHERE id = :id")
+    suspend fun getBusinessById(id: String): BusinessEntity?
 
-    @Query("UPDATE products SET businessId = :businessId WHERE ownerId = :ownerId")
-    suspend fun reassignProducts(ownerId: String, businessId: String)
+    @Query("DELETE FROM businesses WHERE id = :id AND ownerId = :ownerId")
+    suspend fun deleteBusinessById(ownerId: String, id: String)
 
-    @Query("""SELECT (SELECT COUNT(*) FROM transactions WHERE ownerId = :ownerId AND syncStatus = 'PENDING') +
-        (SELECT COUNT(*) FROM products WHERE ownerId = :ownerId AND syncStatus = 'PENDING') +
-        (SELECT COUNT(*) FROM businesses WHERE ownerId = :ownerId AND syncStatus = 'PENDING')""")
-    fun observePendingCount(ownerId: String): Flow<Int>
+    @Query("UPDATE transactions SET businessId = :newId WHERE ownerId = :ownerId AND businessId = :oldId")
+    suspend fun reassignBusinessTransactions(ownerId: String, oldId: String, newId: String)
+
+    @Query("UPDATE products SET businessId = :newId WHERE ownerId = :ownerId AND businessId = :oldId")
+    suspend fun reassignBusinessProducts(ownerId: String, oldId: String, newId: String)
 
     @Transaction
-    suspend fun applySnapshot(business: BusinessEntity?, products: List<ProductEntity>, transactions: List<TransactionEntity>) {
-        if (business != null) {
-            val local = getBusiness(business.ownerId)
-            // Adopt the canonical ID while retaining newer offline business edits.
-            replaceBusiness(if (local != null && local.updatedAt > business.updatedAt) local.copy(id = business.id) else business)
+    suspend fun applyMultiSnapshot(ownerId: String, businesses: List<BusinessEntity>, products: List<ProductEntity>, transactions: List<TransactionEntity>, bootstrapId: String? = null) {
+        val local = getBusinesses(ownerId)
+        // Only the offline first-business bootstrap can have a different canonical ID.
+        // Additional businesses are created on the server and never remapped.
+        val first = local.singleOrNull()
+        if (first != null && first.syncStatus == "PENDING" && businesses.isNotEmpty() && businesses.none { it.id == first.id }) {
+            val canonical = businesses.find { it.id == bootstrapId } ?: businesses.first()
+            deleteBusinessById(ownerId, first.id)
+            upsertBusiness(if (first.updatedAt > canonical.updatedAt) first.copy(id = canonical.id) else canonical)
+            reassignBusinessTransactions(ownerId, first.id, canonical.id)
+            reassignBusinessProducts(ownerId, first.id, canonical.id)
+        }
+        businesses.forEach { incoming ->
+            val existing = getBusinessById(incoming.id)
+            if (existing == null || incoming.updatedAt >= existing.updatedAt) upsertBusiness(incoming)
         }
         syncProducts(products)
         syncTransactions(transactions)
     }
 
-    @Transaction
-    suspend fun replaceBusiness(business: BusinessEntity) {
-        deleteBusinessForOwner(business.ownerId)
-        upsertBusiness(business)
-        reassignTransactions(business.ownerId, business.id)
-        reassignProducts(business.ownerId, business.id)
-    }
+    @Upsert
+    suspend fun upsertBusiness(business: BusinessEntity)
+
+    @Query("""SELECT (SELECT COUNT(*) FROM transactions WHERE ownerId = :ownerId AND syncStatus = 'PENDING') +
+        (SELECT COUNT(*) FROM products WHERE ownerId = :ownerId AND syncStatus = 'PENDING') +
+        (SELECT COUNT(*) FROM businesses WHERE ownerId = :ownerId AND syncStatus = 'PENDING')""")
+    fun observePendingCount(ownerId: String): Flow<Int>
 
     @Query(
         """SELECT * FROM transactions
@@ -97,9 +108,7 @@ interface KarsaDao {
     suspend fun syncProducts(remote: List<ProductEntity>) {
         remote.forEach { incoming ->
             val local = getProduct(incoming.id)
-            if (local == null || incoming.updatedAt >= local.updatedAt) {
-                upsertProduct(incoming)
-            }
+            upsertProduct(mergeSyncedProduct(local, incoming))
         }
     }
 
@@ -135,6 +144,7 @@ interface KarsaDao {
         newTx.productId?.let { productId ->
             val qty = newTx.quantity ?: 1L
             val product = getProduct(productId) ?: error("Produk tidak ditemukan")
+            check(product.ownerId == newTx.ownerId && product.businessId == newTx.businessId) { "Produk berasal dari bisnis lain" }
             check(product.deletedAt == null) { "Produk sudah dihapus" }
             check(product.stock >= qty) {
                 "Stok ${product.name} tidak mencukupi (tersisa ${product.stock})"

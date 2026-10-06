@@ -80,7 +80,7 @@ test("all migrations applied and repeated without data loss", async () => {
   await applyMigrations(pool);
   assert.equal(
     (await pool.query("SELECT * FROM schema_migrations")).rowCount,
-    2,
+    3,
   );
   assert.equal((await snapshot("migration")).status, 200);
 });

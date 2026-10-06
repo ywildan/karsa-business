@@ -1,16 +1,17 @@
 # Karsa Business
 
-Karsa Business adalah aplikasi Android native untuk pencatatan keuangan bisnis mahasiswa. UI dibangun dengan Kotlin dan Jetpack Compose, penyimpanan lokal memakai Room, sinkronisasi memakai WorkManager, autentikasi memakai Firebase Auth, dan data cloud disimpan di Neon PostgreSQL melalui Neon Functions.
+Karsa Business adalah aplikasi Android native untuk pencatatan keuangan bisnis mahasiswa. UI dibangun dengan Kotlin dan Jetpack Compose, penyimpanan lokal memakai Room, sinkronisasi memakai WorkManager, autentikasi memakai Firebase Auth, dan data cloud disimpan di Neon PostgreSQL melalui API pada Vercel atau Neon Functions. Dashboard web Premium berada di `backend/public` dan memakai API serta akun yang sama dengan HP.
 
 ## Fitur MVP
 
-- Onboarding dan setup satu bisnis per akun.
+- Onboarding dan setup bisnis: Gratis satu bisnis aktif, Premium maksimal lima bisnis.
 - Masuk/daftar melalui email mahasiswa atau Google.
 - Pembatasan email `@students.untidar.ac.id` di aplikasi dan backend.
 - Pencatatan pemasukan/pengeluaran secara offline.
 - Edit dan soft delete transaksi.
 - Riwayat, pencarian, filter, saldo, serta laporan bulanan.
-- Sinkronisasi otomatis dan dukungan beberapa perangkat.
+- Sinkronisasi otomatis, dukungan beberapa perangkat, dan isolasi data per bisnis.
+- Dashboard web Premium untuk transaksi, produk/stok, analitik enam bulan, CSV, dan cetak PDF.
 - APK debug dan release dibangun sepenuhnya oleh GitHub Actions.
 
 ## Arsitektur
@@ -20,11 +21,15 @@ Android (Compose)
   ├─ Room: sumber data lokal
   ├─ WorkManager: antrean sinkronisasi
   ├─ Firebase Auth: identitas pengguna
-  └─ Neon Function API
+  └─ API (Vercel / Neon Function)
        └─ Neon PostgreSQL
 ```
 
 Connection string Neon tidak pernah dimasukkan ke APK. Aplikasi hanya mengenal URL HTTPS API dan token Firebase pengguna.
+
+## Dashboard web Premium dan Vercel
+
+Panduan lengkap aktivasi Premium manual, migrasi tanpa kehilangan bisnis lama, Firebase web, environment variables Vercel, dan penerbitan APK baru ada di [docs/PREMIUM-DEPLOYMENT.md](docs/PREMIUM-DEPLOYMENT.md). Root Directory Vercel adalah `backend`. Pembayaran otomatis belum diintegrasikan.
 
 ## GitHub Secrets
 

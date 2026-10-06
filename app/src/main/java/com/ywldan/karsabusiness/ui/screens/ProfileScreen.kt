@@ -75,7 +75,7 @@ fun ProfileScreen(state: MainUiState, padding: PaddingValues, onSync: () -> Unit
                         Text(state.business?.type.orEmpty(), color = Muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                Text("Paket gratis · 1 dari 1 bisnis", Modifier.padding(top = 14.dp), color = Forest, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                Text("Paket ${if (state.account.premium) "Premium" else "gratis"} · ${state.businesses.size} dari ${state.account.businessLimit} bisnis", Modifier.padding(top = 14.dp), color = Forest, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
             }
         }
         item {

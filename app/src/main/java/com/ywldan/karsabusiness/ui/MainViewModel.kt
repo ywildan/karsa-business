@@ -15,6 +15,8 @@ import com.ywldan.karsabusiness.data.local.TransactionType
 import com.ywldan.karsabusiness.data.repository.KarsaRepository
 import com.ywldan.karsabusiness.data.sync.SyncScheduler
 import com.ywldan.karsabusiness.data.sync.SyncState
+import com.ywldan.karsabusiness.data.sync.AccountState
+import com.ywldan.karsabusiness.data.sync.AccountStateStore
 import com.ywldan.karsabusiness.data.sync.SyncStateStore
 import com.ywldan.karsabusiness.domain.FinanceSummary
 import com.ywldan.karsabusiness.domain.InventorySummary
@@ -35,6 +37,9 @@ data class MainUiState(
     val onboardingSeen: Boolean = false,
     val user: AuthUser? = null,
     val business: BusinessEntity? = null,
+    val businesses: List<BusinessEntity> = emptyList(),
+    val account: AccountState = AccountState(),
+    val showBusinessManager: Boolean = false,
     val transactions: List<TransactionEntity> = emptyList(),
     val summary: FinanceSummary = FinanceSummary(0, 0, 0, 0),
     val products: List<ProductEntity> = emptyList(),
@@ -48,7 +53,11 @@ data class MainUiState(
     val sync: SyncState = SyncState(),
     val busy: Boolean = false,
     val message: String? = null,
-)
+) {
+    val businessReadOnly: Boolean get() = !account.premium && business != null &&
+        business.id != (account.freeBusinessId ?: businesses.firstOrNull()?.id)
+}
+
 
 class MainViewModel(
     private val repository: KarsaRepository,
@@ -59,6 +68,7 @@ class MainViewModel(
     private val _state = MutableStateFlow(MainUiState())
     val state: StateFlow<MainUiState> = _state.asStateFlow()
     private var dataJob: Job? = null
+    private val selectedBusinessId = MutableStateFlow<String?>(null)
 
     init {
         val user = auth.currentUser()
@@ -120,15 +130,21 @@ class MainViewModel(
             showMessage("Nama usaha minimal 2 karakter")
             return
         }
+        if (state.value.businesses.size >= state.value.account.businessLimit) {
+            showMessage("Paket ${if (state.value.account.premium) "Premium" else "gratis"} mengizinkan ${state.value.account.businessLimit} bisnis")
+            return
+        }
         viewModelScope.launch {
             setBusy(true)
             runCatching { repository.createBusiness(user.id, name, type, initialCapital) }
+                .onSuccess { id -> selectBusiness(id); showMessage("Bisnis ditambahkan") }
                 .onFailure { showMessage(it.readableMessage()) }
             setBusy(false)
         }
     }
 
     fun openAdd(transaction: TransactionEntity? = null) {
+        if (!ensureWritable()) return
         _state.update { it.copy(showTransactionForm = true, transactionEditor = transaction) }
     }
 
@@ -146,6 +162,7 @@ class MainViewModel(
         productId: String? = null,
         quantity: Long? = null,
     ) {
+        if (!ensureWritable()) return
         val current = state.value
         val user = current.user ?: return
         val business = current.business ?: return
@@ -180,6 +197,7 @@ class MainViewModel(
     // ---- Products ----
 
     fun openProductForm(product: ProductEntity? = null) {
+        if (!ensureWritable()) return
         _state.update { it.copy(showProductForm = true, productEditor = product) }
     }
 
@@ -188,6 +206,7 @@ class MainViewModel(
     }
 
     fun saveProduct(name: String, price: Long, stock: Long) {
+        if (!ensureWritable()) return
         val current = state.value
         val user = current.user ?: return
         val business = current.business ?: return
@@ -209,6 +228,7 @@ class MainViewModel(
     }
 
     fun adjustStock(productId: String, delta: Long) {
+        if (!ensureWritable()) return
         viewModelScope.launch {
             runCatching { repository.adjustStock(productId, delta) }
                 .onSuccess { showMessage(if (delta > 0) "Stok ditambah" else "Stok dikurangi") }
@@ -217,6 +237,7 @@ class MainViewModel(
     }
 
     fun deleteProduct(id: String) {
+        if (!ensureWritable()) return
         viewModelScope.launch {
             runCatching { repository.deleteProduct(id) }
                 .onSuccess {
@@ -228,6 +249,7 @@ class MainViewModel(
     }
 
     fun deleteTransaction(id: String) {
+        if (!ensureWritable()) return
         viewModelScope.launch {
             runCatching { repository.deleteTransaction(id) }
                 .onSuccess {
@@ -255,34 +277,55 @@ class MainViewModel(
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 
+    fun openBusinessManager() { _state.update { it.copy(showBusinessManager = true) } }
+    fun closeBusinessManager() { _state.update { it.copy(showBusinessManager = false) } }
+    fun selectBusiness(id: String) {
+        preferences.edit().putString("${state.value.user?.id}.selectedBusiness", id).apply()
+        selectedBusinessId.value = id
+        closeAdd(); closeProductForm()
+    }
+    fun chooseFreeBusiness() {
+        val current = state.value
+        val user = current.user ?: return
+        val business = current.business ?: return
+        viewModelScope.launch {
+            setBusy(true)
+            runCatching { repository.chooseFreeBusiness(user.id, business.id) }
+                .onSuccess { showMessage("Bisnis gratis aktif diperbarui") }
+                .onFailure { showMessage(it.readableMessage()) }
+            setBusy(false)
+        }
+    }
+    private fun ensureWritable(): Boolean {
+        if (state.value.businessReadOnly) {
+            showMessage("Bisnis ini hanya dapat dibaca. Pilih sebagai bisnis gratis aktif atau perpanjang Premium.")
+            return false
+        }
+        return true
+    }
     private fun observeUserData(user: AuthUser) {
         dataJob?.cancel()
+        selectedBusinessId.value = preferences.getString("${user.id}.selectedBusiness", null)
         dataJob = viewModelScope.launch {
-            combine(
-                repository.observeBusiness(user.id),
-                repository.observeTransactions(user.id),
-                repository.observeProducts(user.id),
-                repository.observePendingCount(user.id),
+            val data = combine(
+                repository.observeBusinesses(user.id), repository.observeTransactions(user.id),
+                repository.observeProducts(user.id), repository.observePendingCount(user.id),
                 SyncStateStore(getApplication()).observe(user.id),
-            ) { business, transactions, products, pending, sync ->
-                MainUiState(business = business, transactions = transactions, products = products, pendingCount = pending, sync = sync)
+            ) { businesses, transactions, products, pending, sync ->
+                MainUiState(businesses = businesses, transactions = transactions, products = products, pendingCount = pending, sync = sync)
+            }
+            combine(data, selectedBusinessId, AccountStateStore(getApplication()).observe(user.id)) { rows, selected, account ->
+                val business = rows.businesses.find { it.id == selected } ?: rows.businesses.firstOrNull()
+                rows.copy(business = business, account = account,
+                    transactions = rows.transactions.filter { it.businessId == business?.id },
+                    products = rows.products.filter { it.businessId == business?.id })
             }.collect { data ->
-                    val business = data.business
-                    val transactions = data.transactions
-                    val products = data.products
-                    _state.update {
-                        it.copy(
-                            loading = false,
-                            business = business,
-                            pendingCount = data.pendingCount,
-                            sync = data.sync,
-                            transactions = transactions,
-                            products = products,
-                            summary = calculateSummary(business?.initialCapital ?: 0, transactions),
-                            inventory = calculateInventory(products),
-                        )
-                    }
-                }
+                _state.update { it.copy(loading = false, business = data.business, businesses = data.businesses,
+                    account = data.account, pendingCount = data.pendingCount, sync = data.sync,
+                    transactions = data.transactions, products = data.products,
+                    summary = calculateSummary(data.business?.initialCapital ?: 0, data.transactions),
+                    inventory = calculateInventory(data.products)) }
+            }
         }
     }
 
