@@ -5,9 +5,11 @@ on:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      version:
-        description: "Versi rilis, contoh v1.0.2. Wajib lebih tinggi dari seluruh rilis yang sudah ada."
+      publish_release:
+        description: "Publish APK produksi dengan versi berikutnya otomatis (main saja)"
+        type: boolean
         required: true
+        default: false
 
 concurrency:
   group: karsa-business-android-release
@@ -17,26 +19,45 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    name: Validate without publishing
+    if: github.event_name == 'workflow_dispatch' && !inputs.publish_release
+    permissions:
+      contents: read
+    uses: ./.github/workflows/android-ci.yml
+    secrets: inherit
+
   release:
+    if: github.event_name == 'push' || inputs.publish_release == true
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+      RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Bentuk tag dicek lebih dulu supaya input manual yang keliru tidak pernah
-      # sampai ke tahap build.
+      # Manual publishing always selects a fresh version; tag pushes use their tag.
       - name: Resolve and validate release tag
         id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python3 scripts/release_guard.py "$RELEASE_TAG"
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" != "refs/heads/main" ]]; then
             echo "::error::Manual releases must build main."
             exit 1
           fi
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --slurp > "$RUNNER_TEMP/releases.json"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/tags?per_page=100" --paginate --jq '.[].name' > "$RUNNER_TEMP/tags.txt"
+            python3 scripts/release_guard.py --auto --releases "$RUNNER_TEMP/releases.json" --tags "$RUNNER_TEMP/tags.txt"
+          else
+            python3 scripts/release_guard.py "$RELEASE_TAG" --releases "$RUNNER_TEMP/releases.json"
+          fi
+
+      - name: Test release version selection
+        run: python3 -m unittest discover -s tests
 
       - name: Validate release secrets
         env:
@@ -99,6 +120,10 @@ jobs:
           TAG="v$VERSION"
           git ls-remote --tags origin "refs/tags/$TAG" > "$RUNNER_TEMP/remote-tag.txt"
           if [ -s "$RUNNER_TEMP/remote-tag.txt" ]; then
+            if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+              echo "::error::Release tag already exists. Run the workflow again to select a fresh version."
+              exit 1
+            fi
             git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
             test "$(git rev-parse "$TAG^{commit}")" = "$GITHUB_SHA" || { echo "::error::Existing tag points to a different commit"; exit 1; }
           fi
@@ -248,6 +273,18 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "Karsa-Business-${TAG}.apk"
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --slurp > "$RUNNER_TEMP/releases.json"
           python3 scripts/release_guard.py "$VERSION" --releases "$RUNNER_TEMP/releases.json"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            remote_sha="$(git ls-remote --exit-code origin refs/heads/main | cut -f1)"
+            if [[ "$remote_sha" != "$GITHUB_SHA" ]]; then
+              echo "::error::main changed during the build. Run the workflow again from the latest main."
+              exit 1
+            fi
+            git ls-remote --tags origin "refs/tags/$TAG" > "$RUNNER_TEMP/publish-tag.txt"
+            if [[ -s "$RUNNER_TEMP/publish-tag.txt" ]]; then
+              echo "::error::Release tag was created during the build. Run the workflow again."
+              exit 1
+            fi
+          fi
           sha256sum "Karsa-Business-${TAG}.apk" > SHA256SUMS
           # --target binds manually created tags to the commit that was built.
           gh release create "$TAG" "Karsa-Business-${TAG}.apk" SHA256SUMS \

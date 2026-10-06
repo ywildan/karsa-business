@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="570" viewBox="0 0 390 570">
+  <rect width="390" height="570" fill="#F6F4EE"/>
+  <g font-family="sans-serif" fill="#0E3B2E">
+    <text x="20" y="43" font-size="28" font-weight="800">Riwayat transaksi</text>
+    <text x="20" y="68" font-size="14" fill="#6C7A73">Semua pergerakan uang usahamu.</text>
+    <text x="20" y="106" font-size="14" font-weight="700">Ringkasan</text>
+    <text x="370" y="106" text-anchor="end" font-size="12" fill="#6C7A73">8 transaksi</text>
+    <rect x="20" y="120" width="169" height="112" rx="22" fill="#FFFFFF"/>
+    <rect x="201" y="120" width="169" height="112" rx="22" fill="#FFFFFF"/>
+    <circle cx="53" cy="153" r="17" fill="#E1F4E9"/>
+    <path d="M53 144v18m-6-6 6 6 6-6" fill="none" stroke="#0E3B2E" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="158" font-size="13" font-weight="700" fill="#6C7A73">Masuk</text>
+    <text x="36" y="211" font-size="22" font-weight="800">Rp 95.000</text>
+    <circle cx="234" cy="153" r="17" fill="#FDE8E3"/>
+    <path d="M234 162v-18m-6 6 6-6 6 6" fill="none" stroke="#EF5F4A" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="259" y="158" font-size="13" font-weight="700" fill="#6C7A73">Keluar</text>
+    <text x="217" y="211" font-size="22" font-weight="800" fill="#EF5F4A">Rp 75.000</text>
+    <rect x="20" y="244" width="350" height="151" rx="22" fill="#D4F36B"/>
+    <circle cx="57" cy="281" r="17" fill="#FFFFFF" fill-opacity=".6"/>
+    <path d="m48 287 6-6 5 3 7-9m-7 0h7v7" fill="none" stroke="#0E3B2E" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="84" y="286" font-size="14" font-weight="700">Laba</text>
+    <text x="40" y="340" font-size="34" font-weight="800">Rp 20.000</text>
+    <text x="40" y="373" font-size="12" fill="#0E3B2E" fill-opacity=".8">Pengeluaran 79% dari pemasukan</text>
+    <text x="20" y="433" font-size="15" font-weight="800">Selasa, 6 Oktober 2026</text>
+    <rect x="20" y="450" width="350" height="78" rx="20" fill="#FFFFFF"/>
+    <rect x="34" y="467" width="44" height="44" rx="14" fill="#E1F4E9"/>
+    <path d="M56 479v20m-7-7 7 7 7-7" fill="none" stroke="#12A36B" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="90" y="485" font-size="14" font-weight="700">Penjualan</text>
+    <text x="90" y="507" font-size="12" fill="#6C7A73">Pesanan pelanggan</text>
+    <text x="356" y="494" font-size="14" font-weight="800" text-anchor="end" fill="#12A36B">+Rp 25.000</text>
+  </g>
+</svg>
