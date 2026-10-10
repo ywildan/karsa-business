@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.ywldan.karsabusiness.ui.screens.BusinessManagerScreen
+import com.ywldan.karsabusiness.ui.screens.SettingsScreen
 import com.ywldan.karsabusiness.ui.screens.AuthScreen
 import com.ywldan.karsabusiness.ui.screens.MainShell
 import com.ywldan.karsabusiness.ui.screens.OnboardingScreen
@@ -41,6 +42,7 @@ private enum class AppStage { LOADING, ONBOARDING, AUTH, SETUP, MAIN }
 @Composable
 fun KarsaApp(model: MainViewModel, activity: Activity) {
     val state by model.state.collectAsState()
+    val themeMode by model.themeMode.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     val stage = when {
         state.loading -> AppStage.LOADING
@@ -115,6 +117,11 @@ fun KarsaApp(model: MainViewModel, activity: Activity) {
         BackHandler(enabled = state.showBusinessManager, onBack = model::closeBusinessManager)
         AnimatedVisibility(visible = state.showBusinessManager, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
             BusinessManagerScreen(state, model::closeBusinessManager, model::selectBusiness, model::createBusiness, model::chooseFreeBusiness)
+        }
+
+        BackHandler(enabled = state.showSettings, onBack = model::closeSettings)
+        AnimatedVisibility(visible = state.showSettings, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+            SettingsScreen(themeMode, model::setThemeMode, model::closeSettings)
         }
 
         SnackbarHost(

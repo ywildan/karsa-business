@@ -41,6 +41,7 @@ data class MainUiState(
     val businesses: List<BusinessEntity> = emptyList(),
     val account: AccountState = AccountState(),
     val showBusinessManager: Boolean = false,
+    val showSettings: Boolean = false,
     val transactions: List<TransactionEntity> = emptyList(),
     val summary: FinanceSummary = FinanceSummary(0, 0, 0, 0),
     val products: List<ProductEntity> = emptyList(),
@@ -287,6 +288,8 @@ class MainViewModel(
 
     fun openBusinessManager() { _state.update { it.copy(showBusinessManager = true) } }
     fun closeBusinessManager() { _state.update { it.copy(showBusinessManager = false) } }
+    fun openSettings() { _state.update { it.copy(showSettings = true) } }
+    fun closeSettings() { _state.update { it.copy(showSettings = false) } }
     fun selectBusiness(id: String) {
         preferences.edit().putString("${state.value.user?.id}.selectedBusiness", id).apply()
         selectedBusinessId.value = id

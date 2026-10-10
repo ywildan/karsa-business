@@ -23,7 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +54,6 @@ private val tabs = listOf(
 fun MainShell(state: MainUiState, model: MainViewModel) {
     var showBusinessSwitcher by rememberSaveable { mutableStateOf(false) }
     val openBusinessSwitcher = { showBusinessSwitcher = true }
-    val themeMode by model.themeMode.collectAsState()
     val showStatus = state.businessReadOnly || state.sync.message.isNotBlank() ||
         state.pendingCount > 0 || state.sync.phase == "running"
     Scaffold(
@@ -122,7 +120,7 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
                 MainTab.HISTORY -> HistoryScreen(state, padding, model::openAdd)
                 MainTab.PRODUCTS -> ProductScreen(state, padding, model)
                 MainTab.REPORTS -> ReportsScreen(state, padding)
-                MainTab.PROFILE -> ProfileScreen(state, padding, themeMode, model::setThemeMode, model::syncNow, model::signOut, openBusinessSwitcher, model::openBusinessManager)
+                MainTab.PROFILE -> ProfileScreen(state, padding, model::syncNow, model::signOut, openBusinessSwitcher, model::openBusinessManager, model::openSettings)
             }
         }
     }

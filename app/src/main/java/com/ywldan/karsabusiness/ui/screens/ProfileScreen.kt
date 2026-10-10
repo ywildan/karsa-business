@@ -9,16 +9,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -39,18 +40,16 @@ import com.ywldan.karsabusiness.ui.theme.Forest
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
-import com.ywldan.karsabusiness.ui.theme.ThemeMode
 
 @Composable
 fun ProfileScreen(
     state: MainUiState,
     padding: PaddingValues,
-    themeMode: Int,
-    onThemeMode: (Int) -> Unit,
     onSync: () -> Unit,
     onLogout: () -> Unit,
     onBusiness: () -> Unit,
     onManageBusinesses: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     LazyColumn(
         Modifier.fillMaxSize().background(Cream),
@@ -62,7 +61,7 @@ fun ProfileScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Text("Profil & pengaturan", style = MaterialTheme.typography.headlineLarge) }
+        item { Text("Profil", style = MaterialTheme.typography.headlineLarge) }
         item {
             Row(
                 Modifier.fillMaxWidth().background(Forest, RoundedCornerShape(28.dp)).padding(20.dp),
@@ -80,28 +79,22 @@ fun ProfileScreen(
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp)).padding(18.dp)) {
-                Text("Tampilan", fontWeight = FontWeight.Bold)
-                Text(
-                    "Mode gelap lebih nyaman dilihat di malam hari.",
-                    Modifier.padding(top = 4.dp),
-                    color = Muted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 12.dp)
-                        .background(Cream, RoundedCornerShape(16.dp)).padding(4.dp),
+            Row(
+                Modifier.fillMaxWidth().background(Card, RoundedCornerShape(24.dp))
+                    .clickable(onClick = onSettings).padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(44.dp).background(Mint, CircleShape),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    ThemeChoice("Sistem", themeMode == ThemeMode.SYSTEM, Modifier.weight(1f)) {
-                        onThemeMode(ThemeMode.SYSTEM)
-                    }
-                    ThemeChoice("Terang", themeMode == ThemeMode.LIGHT, Modifier.weight(1f)) {
-                        onThemeMode(ThemeMode.LIGHT)
-                    }
-                    ThemeChoice("Gelap", themeMode == ThemeMode.DARK, Modifier.weight(1f)) {
-                        onThemeMode(ThemeMode.DARK)
-                    }
+                    Icon(Icons.Rounded.Settings, null, tint = Forest)
                 }
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text("Pengaturan", fontWeight = FontWeight.Bold)
+                    Text("Tema & tampilan", color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
+                Icon(Icons.Rounded.ChevronRight, null, tint = Muted)
             }
         }
         item {
@@ -148,21 +141,3 @@ fun ProfileScreen(
         }
     }
 }
-
-@Composable
-private fun ThemeChoice(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Box(
-        modifier.height(42.dp)
-            .background(if (selected) Lime else Color.Transparent, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            color = if (selected) Forest else Muted,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
-}
-
