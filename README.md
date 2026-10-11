@@ -11,6 +11,7 @@ Karsa Business adalah aplikasi Android native untuk pencatatan keuangan bisnis m
 - Edit dan soft delete transaksi.
 - Riwayat, pencarian, filter, saldo, serta laporan bulanan.
 - Sinkronisasi otomatis, dukungan beberapa perangkat, dan isolasi data per bisnis.
+- Profil dan Pengaturan terpisah: status sinkronisasi dan akun di Profil, preferensi tampilan termasuk mode gelap di Pengaturan.
 - Dashboard web Premium untuk transaksi, produk/stok, analitik enam bulan, CSV, dan cetak PDF.
 - APK debug dan release dibangun sepenuhnya oleh GitHub Actions.
 
@@ -27,6 +28,28 @@ Android (Compose)
 
 Connection string Neon tidak pernah dimasukkan ke APK. Aplikasi hanya mengenal URL HTTPS API dan token Firebase pengguna.
 
+### Runtime API
+
+Handler inti yang sama dipakai pada dua runtime: **Neon Function**
+(`backend/neon.ts` → `backend/functions/*`) dan **Vercel**
+(`backend/api/index.ts` + `backend/vercel.json`). Keduanya melayani `/health`,
+`/v1`, `/v2`, dan `/web-config`. Dashboard web Premium dilayani dari
+`backend/public` pada origin yang sama, jadi HP dan web memakai API serta akun
+yang identik.
+
+- `/v2/*` — jalur fitur lengkap: akun, snapshot, sync multi-usaha, CRUD bisnis,
+  CRUD produk/transaksi untuk dashboard web.
+- `/v1/*` — snapshot/sync satu bisnis; dipertahankan hanya agar APK lama tetap
+  bisa sinkron, jangan dipakai untuk klien baru.
+- `/web-config` — mengembalikan konfigurasi Firebase publik yang dibutuhkan
+  dashboard (project ID + web API key, domain auth diturunkan dari host
+  permintaan). Membalas 503 bila `FIREBASE_WEB_API_KEY` belum diisi.
+- `/__/auth/*` dan `/__/firebase/init.json` — proxy helper Firebase Auth dan
+  konfigurasi publik yang membuat origin API sah sebagai Firebase Auth domain;
+  hanya dilayani entrypoint Vercel (`backend/api/index.ts`), bukan handler Neon
+  Function. Akibatnya login dashboard web hanya berfungsi pada deployment
+  Vercel.
+
 ## Dashboard web Premium dan Vercel
 
 Panduan lengkap aktivasi Premium manual, migrasi tanpa kehilangan bisnis lama, Firebase web, environment variables Vercel, dan penerbitan APK baru ada di [docs/PREMIUM-DEPLOYMENT.md](docs/PREMIUM-DEPLOYMENT.md). Root Directory Vercel adalah `backend`. Pembayaran otomatis belum diintegrasikan.
@@ -39,9 +62,10 @@ Tambahkan melalui **Repository Settings → Secrets and variables → Actions**:
 |---|---|
 | `FIREBASE_API_KEY` | API key aplikasi Android Firebase |
 | `FIREBASE_APP_ID` | Firebase Android App ID |
-| `FIREBASE_PROJECT_ID` | ID project Firebase |
+| `FIREBASE_PROJECT_ID` | ID project Firebase (juga disuntikkan ke bundle backend oleh workflow Deploy Neon Backend) |
 | `FIREBASE_WEB_CLIENT_ID` | OAuth Web Client ID untuk Google Sign-In |
-| `KARSA_API_BASE_URL` | URL publik Neon Function tanpa garis miring terakhir |
+| `FIREBASE_WEB_API_KEY` | API key Firebase untuk web, dibaca backend saat runtime pada `/web-config` (`backend/functions/api.ts:38`). Diisi sebagai environment variable platform hosting (Vercel/Neon Function, lihat [docs/PREMIUM-DEPLOYMENT.md](docs/PREMIUM-DEPLOYMENT.md)); workflow Actions tidak membacanya |
+| `KARSA_API_BASE_URL` | Origin HTTPS publik API — deployment Vercel atau Neon Function, tanpa garis miring terakhir dan tanpa path `/v1`, `/v2`, `/api` |
 | `DATABASE_URL` | Pooled connection string Neon, hanya untuk backend workflow |
 | `NEON_API_KEY` | Project-scoped Neon API key |
 | `NEON_PROJECT_ID` | ID project Neon |
@@ -135,13 +159,13 @@ Setelah deployment pertama, salin URL Function ke secret `KARSA_API_BASE_URL` la
 
 ## Build dan release
 
-- Setiap push/PR ke `main` menjalankan unit test, membangun APK debug, dan menguji build release dengan R8 serta keystore/config uji. Artifact yang dibagikan CI tetap APK debug.
-- Push tag seperti `v1.0.2` menjalankan test, membuat APK release bertanda tangan, lalu mengunggahnya ke GitHub Releases.
-- Untuk publish versi baru otomatis, buka **Actions → Android Release → Run workflow** pada `main`, lalu centang **publish_release**. Workflow memilih versi berikutnya di atas seluruh GitHub Releases (termasuk draft/prerelease) dan tag yang sudah ada, membangun APK bertanda tangan, lalu membuat GitHub Release beserta checksum. Rilis pertama memakai `v0.1.0`; contoh setelah `v1.0.3` akan dipilih `v1.0.4`.
+- Setiap push ke `main` atau branch `codex/**`, dan setiap pull request ke `main`, menjalankan unit test, membangun APK debug, dan menguji build release dengan R8 serta keystore/config uji. Artifact yang dibagikan CI tetap APK debug.
+- Push tag seperti `v1.0.13` menjalankan test, membuat APK release bertanda tangan, lalu mengunggahnya ke GitHub Releases.
+- Untuk publish versi baru otomatis, buka **Actions → Android Release → Run workflow** pada `main`, lalu centang **publish_release**. Workflow memilih versi berikutnya di atas seluruh GitHub Releases (termasuk draft/prerelease) dan tag yang sudah ada, membangun APK bertanda tangan, lalu membuat GitHub Release beserta checksum. Rilis pertama memakai `v0.1.0`; contoh setelah `v1.0.12` akan dipilih `v1.0.13`.
 - Tanpa centang **publish_release**, workflow hanya menjalankan Android CI untuk validasi dan tidak menerbitkan rilis. Tidak ada kolom versi manual; nomor versi selalu dipilih otomatis ketika publish dari Actions. Jika `main` berubah selama build, jalankan kembali workflow dari commit terbaru.
 - Saat dijalankan manual, nomor versi dibandingkan dengan semua halaman GitHub Releases, termasuk draft/prerelease. Versi sama dan downgrade ditolak.
 
-Detail syarat pembaruan aplikasi danCadangan keystore ada di bagian
+Detail syarat pembaruan aplikasi dan Cadangan keystore ada di bagian
 [Penandatanganan rilis](#penandatanganan-rilis-dan-pembaruan-aplikasi).
 
 ## Catatan keamanan
@@ -150,29 +174,38 @@ Detail syarat pembaruan aplikasi danCadangan keystore ada di bagian
 - Firebase ID token diverifikasi menggunakan JWKS resmi Google.
 - Semua query backend menggunakan parameter SQL.
 - Penghapusan transaksi menggunakan `deleted_at` agar tersinkronkan ke perangkat lain.
+- Dashboard web dilindungi header keamanan dari `backend/vercel.json`: `X-Content-Type-Options: nosniff` dan `Referrer-Policy` untuk semua path, ditambah `X-Frame-Options: DENY` dan CSP ketat untuk seluruh path **kecuali** `/__/auth/*` dan `/__/firebase/*` — pengecualian itu sengaja agar helper Firebase tetap bisa berjalan pada origin yang sama.
 
 ## Perbaikan sinkronisasi dan verifikasi
 
-Pengiriman dibatasi 400 produk/transaksi per batch, dengan produk dikirim sebelum
-penjualannya. Produk terhapus dikirim sebagai tombstone agar penghapusan menyebar,
-sementara penjualan lama tetap dapat disinkronkan. Perubahan stok offline tidak menghidupkan kembali produk yang sudah dihapus. Usaha yang dibuat offline di
-perangkat kedua dihubungkan ke ID usaha kanonik milik akun yang sama; hubungan
-produk dan transaksi lokal ikut diperbarui. Perubahan lokal yang lebih baru tetap
+Pengiriman dibatasi 400 produk/transaksi per batch (`SYNC_BATCH_SIZE`, di bawah
+limit server 500), dengan produk dikirim sebelum penjualannya. Produk terhapus
+dikirim sebagai tombstone agar penghapusan menyebar, sementara penjualan lama
+tetap dapat disinkronkan. Perubahan stok offline tidak menghidupkan kembali
+produk yang sudah dihapus: penggabungan hasil sinkronisasi untuk produk ditangani
+`mergeSyncedProduct`, yang mempertahankan deletion lokal dan mengembalikan status
+perubahan itu menjadi pending. Usaha yang dibuat offline di perangkat kedua
+dihubungkan ke ID usaha kanonik milik akun yang sama melalui
+`legacy_business_id` yang dikembalikan server; hubungan produk dan transaksi
+lokal ikut diperbarui. Remap ini hanya terjadi saat bootstrap usaha pertama —
+usaha tambahan selalu dibuat online. Perubahan lokal yang lebih baru tetap
 pending ketika respons upload yang lebih lama tiba.
 
 Banner dan halaman Profil menampilkan perubahan pending, kegagalan, serta waktu
-sinkronisasi terakhir berhasil. Gangguan jaringan/server dan HTTP 408/429 dicoba
-ulang; validasi dan respons server yang rusak memerlukan tindakan pengguna.
+sinkronisasi terakhir berhasil. Gangguan jaringan/server dan HTTP 408, 429, atau
+kode 5xx dicoba ulang; validasi dan respons server yang rusak memerlukan
+tindakan pengguna.
 HTTP 401 mencoba pembaruan token sekali sebelum meminta pengguna masuk kembali.
 Status kegagalan tidak menyimpan token maupun isi transaksi.
 
-Urutan penerapan: gabungkan perbaikan, deploy backend dari `main`, uji sinkronisasi,
-lalu terbitkan APK dengan versi yang lebih tinggi (berikutnya `v1.0.3` setelah `v1.0.2`).
+Urutan penerapan perubahan sinkronisasi: gabungkan perbaikan, deploy backend dari `main`, uji sinkronisasi,
+lalu terbitkan APK dengan versi yang lebih tinggi — nomor versi berikutnya dipilih
+otomatis oleh workflow di atas seluruh rilis yang pernah ada (tertinggi saat ini `v1.0.12`).
 Keystore dan konfigurasi Firebase produksi tetap harus sesuai aplikasi terpasang.
 
 Checklist HP:
 
-- Update di atas v1.0.2 tanpa uninstall; usaha, produk, dan riwayat tetap ada.
+- Update di atas versi terpasang (rilis terkini `v1.0.12`) tanpa uninstall; usaha, produk, dan riwayat tetap ada.
 - Buat data offline, sambungkan kembali, dan periksa status pending hingga selesai.
 - Uji lebih dari 500 transaksi/produk; putuskan koneksi di tengah sinkronisasi lalu lanjutkan.
 - Pada dua perangkat dengan akun sama, hapus produk di A dan sinkronkan penjualan lama di B.
