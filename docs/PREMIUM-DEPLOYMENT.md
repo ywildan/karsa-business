@@ -11,7 +11,7 @@ Gambar memakai akun dan transaksi uji, bukan data pengguna produksi.
 - Login Google atau email/kata sandi dengan project Firebase yang sama seperti HP. Pembatasan email mahasiswa Untidar dan verifikasi email tetap berlaku.
 - Pilih bisnis di HP dan web; transaksi, produk, stok, modal, serta laporan terpisah per bisnis.
 - Tambah bisnis (maksimal 5 untuk Premium); bisnis tambahan dibuat online agar batas diperiksa server, termasuk pada permintaan bersamaan.
-- Dashboard: ringkasan seluruh bisnis/per bisnis, pencatatan dan edit/hapus transaksi, katalog dan edit/hapus produk, perubahan stok dari penjualan, periode bulanan, tren 6 bulan, kategori biaya, produk terlaris, ekspor CSV, dan cetak laporan melalui menu browser **Save as PDF**.
+- Dashboard: ringkasan seluruh bisnis/per bisnis, pencatatan dan edit/hapus transaksi, katalog dan edit/hapus produk, perubahan stok dari penjualan, periode bulanan, tren 6 bulan, kategori biaya, produk penyumbang omzet terbesar (diurutkan nominal pemasukan, bukan jumlah terjual), ekspor CSV, dan cetak laporan melalui menu browser **Save as PDF**.
 - Sinkronisasi HP ↔ cloud ↔ web. Web mengambil data terbaru saat dibuka, saat Muat ulang, dan setiap 60 detik ketika tab terlihat dan formulir tidak terbuka. HP tetap dapat mencatat offline pada bisnis aktif yang diizinkan.
 - Saat Premium habis, web terkunci dan bisnis tambahan tetap tersimpan/dapat dibaca di HP. Pengguna dapat memilih satu bisnis gratis aktif melalui menu bisnis di HP. Perubahan pending bisnis lain ditahan sampai bisnis tersebut aktif atau Premium diperpanjang.
 
@@ -21,7 +21,7 @@ Gambar memakai akun dan transaksi uji, bukan data pengguna produksi.
 
 Untuk pengguna yang APK lamanya masih memakai Neon Function, buka **GitHub → Actions → Deploy Neon Backend → Run workflow → main**. Pastikan secrets `DATABASE_URL`, `NEON_API_KEY`, `NEON_PROJECT_ID`, dan `FIREBASE_PROJECT_ID` benar. Jika memakai `NEON_BRANCH`, pilih branch database yang sama dengan produksi.
 
-Workflow ini menerapkan migration `003_premium_businesses.sql` dan memperbarui endpoint Neon lama. Jangan hanya menghapus constraint satu bisnis pada database sementara function lama belum diperbarui: query function lama masih memakai `ON CONFLICT(owner_id)`. Selama transisi, perubahan yang belum berhasil sinkron tetap tersimpan lokal dan perlu dicoba ulang setelah deployment selesai.
+Workflow ini menerapkan seluruh migration yang belum tercatat di ledger checksum database (termasuk `003_premium_businesses.sql`) secara berurutan, lalu memperbarui endpoint Neon lama. Jangan hanya menghapus constraint satu bisnis pada database sementara function lama belum diperbarui: query function lama masih memakai `ON CONFLICT(owner_id)`. Selama transisi, perubahan yang belum berhasil sinkron tetap tersimpan lokal dan perlu dicoba ulang setelah deployment selesai.
 
 Migrasi mempertahankan semua ID/data lama. Field `legacy_business_id` membuat APK lama tetap mengakses bisnis asli; `free_business_id` menetapkan bisnis gratis aktif. API v1 hanya mengembalikan data bisnis asli sehingga APK lama tidak menarik atau mencampur bisnis tambahan.
 
@@ -34,7 +34,7 @@ Pada Firebase project yang sama dengan aplikasi Android:
 1. Tambahkan aplikasi **Web** pada Project settings, lalu ambil Web API key dari konfigurasi Firebase web.
 2. Pastikan provider **Email/Password** dan **Google** aktif.
 3. Tambahkan domain Vercel/domain custom dashboard ke **Authentication → Settings → Authorized domains**. Tambahkan domain preview jika dipakai untuk login.
-4. Di **Google Cloud → Google Auth Platform → Clients**, pilih OAuth client tipe **Web** yang dipakai Firebase Google Sign-In. Tambahkan Authorized redirect URI `https://DOMAIN-DASHBOARD/__/auth/handler`; untuk deployment saat ini: `https://karsa-business-backend.vercel.app/__/auth/handler`. Pertahankan callback yang sudah ada. Client yang tepat dapat dicocokkan dengan Web client ID pada Firebase → Authentication → Google → Web SDK configuration.
+4. Di **Google Cloud → Google Auth Platform → Clients**, pilih OAuth client tipe **Web** yang dipakai Firebase Google Sign-In. Tambahkan Authorized redirect URI `https://DOMAIN-DASHBOARD/__/auth/handler` dengan `DOMAIN-DASHBOARD` = origin produksi saat ini, yaitu domain `sikarsa.id` (nilai persisnya adalah yang tersimpan pada secret `KARSA_API_BASE_URL`; `karsa-business-backend.vercel.app` adalah origin deployment awal). Pertahankan callback yang sudah ada. Client yang tepat dapat dicocokkan dengan Web client ID pada Firebase → Authentication → Google → Web SDK configuration.
 5. Jika Web API key dibatasi dengan HTTP referrers, izinkan domain dashboard. Gunakan key web; key Android dengan pembatasan package/signing tidak cocok untuk browser.
 
 Login Google memakai pengalihan halaman penuh dan memulihkan sesi lewat `getRedirectResult`. Server menentukan `authDomain` dari domain dashboard dan mem-proxy helper Firebase pada `/__/auth/*` agar storage sesi berada pada origin yang sama. Dashboard memuat Firebase Auth dari CDN resmi Google. Tidak ada pemasangan paket frontend, dan token sesi dikelola Firebase dengan session persistence. Database credentials tidak pernah dikirim ke browser.
@@ -98,7 +98,7 @@ Tidak ada endpoint pengguna untuk memberi dirinya Premium. Pengelolaan masa akti
 
 ### 5. Terbitkan APK baru yang menuju Vercel
 
-Di GitHub repository secrets, ubah **`KARSA_API_BASE_URL`** menjadi root origin Vercel, misalnya `https://bisnis.domainmu.id`, **tanpa `/api` atau `/v2`**.
+Di GitHub repository secrets, ubah **`KARSA_API_BASE_URL`** menjadi root origin API/dashboard (Vercel atau domain custom yang mengarah ke deployment yang sama — produksi saat ini memakai domain `sikarsa.id`), **tanpa `/api`, `/v1`, `/v2`, dan tanpa garis miring terakhir**.
 
 Jalankan **Actions → Android Release → Run workflow → main → centang publish_release**. Setelah berhasil, unduh APK baru dari Releases dan pasang sebagai update, tanpa uninstall. Keystore, package ID, dan Firebase project tetap sama.
 
@@ -117,11 +117,11 @@ Menu nama bisnis di bagian atas HP membuka pemilih bisnis dan tombol **Buka dash
 
 ## Validasi pengembangan
 
-Pengembangan tidak menjalankan npm/pip/Gradle dependency install atau download lokal: memakai tool/dependency yang sudah tersedia, Gradle offline, browser Chromium yang sudah tersedia, dan image PostgreSQL lokal yang sudah ada dengan `--pull=never` untuk pengujian database sementara.
+Validasi tidak menyentuh data produksi: pengujian database memakai schema PostgreSQL sementara yang dibuat dan dihapus otomatis (`backend/tests/sync.test.ts`, `backend/tests/premium.test.ts`, `backend/tests/preview-server.ts`), dan browser smoke memakai Chrome yang sudah tersedia tanpa pernah menghubungi produksi (`backend/tests/browser-smoke.mjs`).
 
 - Backend TypeScript dan kontrak PostgreSQL: `npm run check` dan `npm test` jika dependency sudah tersedia. `TEST_DATABASE_URL` harus menunjuk database uji terpisah.
 - Unit test Android mencakup isolasi dua bisnis, urutan produk sebelum penjualan, pembagian batch per bisnis, dan penahanan perubahan saat Premium habis.
-- Browser smoke menggunakan `tests/preview-server.ts` (schema database sementara dan Firebase fixture, **tidak masuk production API**) serta Chromium yang sudah tersedia, lalu `npm run test:browser`. Login Firebase produksi dan pemasangan APK pada HP tetap perlu diuji manual setelah deployment.
+- Browser smoke menggunakan `backend/tests/preview-server.ts` (schema database sementara dan Firebase fixture, **tidak masuk production API**) serta Chromium yang sudah tersedia, lalu `npm run test:browser` dari `backend`. Login Firebase produksi dan pemasangan APK pada HP tetap perlu diuji manual setelah deployment.
 - CSV menetralkan formula spreadsheet dari teks pengguna. PDF memakai dialog cetak browser; tidak ada library PDF tambahan.
 
 Konflik perubahan offline tetap mengikuti `updatedAt` terbaru seperti sinkronisasi sebelumnya. Kolaborasi staf/role, pembayaran otomatis, penghapusan bisnis, dan rekonsiliasi konflik stok dua HP yang bersamaan belum ditambahkan.

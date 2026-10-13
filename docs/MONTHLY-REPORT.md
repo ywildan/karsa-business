@@ -28,4 +28,4 @@ Dengan dependency yang sudah tersedia, jalankan `node --test backend/tests/*.tes
 
 Browser smoke menggunakan fixture Firebase dan schema PostgreSQL sementara, tanpa mengakses data produksi. Pengujian mencakup pilihan bulan/bisnis, penelusuran kategori, unduhan CSV yang sesuai bisnis, cetak PDF, dan layout HP, bersama alur transaksi/stok dan akses Premium yang sudah ada.
 
-Fitur ini tidak memerlukan environment variable, perubahan database, atau dependency tambahan. Versi lokal belum tampil pada deployment Vercel sampai perubahan dipublikasikan.
+Fitur ini tidak memerlukan environment variable, perubahan database, atau dependency tambahan. Laporan sudah menjadi bagian dashboard Premium dan ikut terbit pada rilis backend; perubahan baru pada berkas ini baru tampil setelah backend di-deploy dari `main`.
