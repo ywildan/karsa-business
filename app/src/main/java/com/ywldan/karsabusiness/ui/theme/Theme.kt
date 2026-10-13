@@ -45,8 +45,11 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Forest,
-    onPrimary = CreamLight,
+    // Primary sengaja diterangkan di mode gelap: Forest (#0E3B2E) nyaris tak terlihat
+    // di atas permukaan gelap, dan semua tombol/teks bawaan Material (TextButton,
+    // OutlinedButton, label & border TextField fokus, DatePicker) memakai primary.
+    primary = Karsa,
+    onPrimary = Color.White,
     primaryContainer = MintDark,
     onPrimaryContainer = OnMintDark,
     secondary = Karsa,

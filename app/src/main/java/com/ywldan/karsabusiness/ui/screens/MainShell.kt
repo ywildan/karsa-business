@@ -86,7 +86,10 @@ fun MainShell(state: MainUiState, model: MainViewModel) {
                         icon = { Icon(item.icon, item.label) },
                         label = { Text(item.label) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = OnMint,
+                            // Pil indikator selalu Lime (statis), jadi ikon terpilih selalu Forest
+                            // (statis) seperti FAB — pasangan ini kontras & sama persis di kedua mode.
+                            // OnMint adaptif membuat ikon pucat di atas pil Lime saat mode gelap.
+                            selectedIconColor = Forest,
                             selectedTextColor = OnMint,
                             indicatorColor = Lime,
                             unselectedIconColor = Muted,

@@ -40,6 +40,7 @@ import com.ywldan.karsabusiness.ui.theme.Forest
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
+import com.ywldan.karsabusiness.ui.theme.OnMint
 
 @Composable
 fun ProfileScreen(
@@ -88,7 +89,7 @@ fun ProfileScreen(
                     Modifier.size(44.dp).background(Mint, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.Settings, null, tint = Forest)
+                    Icon(Icons.Rounded.Settings, null, tint = OnMint)
                 }
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
                     Text("Pengaturan", fontWeight = FontWeight.Bold)

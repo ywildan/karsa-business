@@ -40,6 +40,7 @@ import com.ywldan.karsabusiness.ui.theme.Amber
 import com.ywldan.karsabusiness.ui.theme.Coral
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Ink
+import com.ywldan.karsabusiness.ui.theme.InkLight
 import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.MintLight
@@ -127,7 +128,9 @@ private fun OnboardingPageContent(page: OnboardingPage) {
                 drawCircle(Coral.copy(alpha = .8f), 8.dp.toPx(), Offset(size.width * .17f, size.height * .2f))
                 drawCircle(Karsa.copy(alpha = .8f), 6.dp.toPx(), Offset(size.width * .83f, size.height * .77f))
             }
-            Icon(page.icon, null, Modifier.size(112.dp), tint = Ink)
+            // Panel ilustrasi memakai warna statis terang, jadi ikonnya pun statis gelap;
+            // memakai Ink adaptif membuatnya nyaris hilang di mode gelap.
+            Icon(page.icon, null, Modifier.size(112.dp), tint = InkLight)
         }
         Spacer(Modifier.height(34.dp))
         Text(

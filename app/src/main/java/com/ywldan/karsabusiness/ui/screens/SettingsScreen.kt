@@ -32,6 +32,7 @@ import com.ywldan.karsabusiness.BuildConfig
 import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
+import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Muted
 import com.ywldan.karsabusiness.ui.theme.Sand
@@ -68,7 +69,7 @@ fun SettingsScreen(
                 Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Rounded.DarkMode, null, tint = Forest)
+                Icon(Icons.Rounded.DarkMode, null, tint = Karsa)
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text("Mode gelap", fontWeight = FontWeight.Bold)
                     Text(

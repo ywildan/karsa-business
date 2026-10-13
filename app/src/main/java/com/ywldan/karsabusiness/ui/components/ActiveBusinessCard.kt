@@ -34,6 +34,7 @@ import com.ywldan.karsabusiness.ui.theme.Card
 import com.ywldan.karsabusiness.ui.theme.Cream
 import com.ywldan.karsabusiness.ui.theme.Forest
 import com.ywldan.karsabusiness.ui.theme.Ink
+import com.ywldan.karsabusiness.ui.theme.Karsa
 import com.ywldan.karsabusiness.ui.theme.Lime
 import com.ywldan.karsabusiness.ui.theme.Mint
 import com.ywldan.karsabusiness.ui.theme.Muted
@@ -95,7 +96,7 @@ fun ActiveBusinessCard(
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Cream))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Sand))
         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Text("Paket ${if (premium) "Premium" else "gratis"} · $businessCount dari $businessLimit bisnis",
                 color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -104,7 +105,7 @@ fun ActiveBusinessCard(
             }, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 repeat(businessLimit.coerceIn(1, 5)) { slot ->
                     Box(Modifier.weight(1f).height(5.dp)
-                        .background(if (slot < businessCount) Forest else Cream, RoundedCornerShape(100.dp)))
+                        .background(if (slot < businessCount) Karsa else Sand, RoundedCornerShape(100.dp)))
                 }
             }
         }
